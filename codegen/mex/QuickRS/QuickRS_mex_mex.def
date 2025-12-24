@@ -1,0 +1,11 @@
+LIBRARY QuickRS_mex.mexw64
+EXPORTS
+mexFunction
+emlrtMexFcnProperties
+QuickRS
+emxEnsureCapacity
+emxFree_real_T
+emxInit_real_T
+QuickRS_initialize
+QuickRS_terminate
+QuickRS_atexit

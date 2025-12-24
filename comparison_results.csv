@@ -1,0 +1,201 @@
+Agent,ID,Gender,Risk,Lifespan,Death Cause,Total Tests,Methods,Intervals,Avg Interval
+Random,1,Female,0.69,76,Natural,23,"Colo, Sigmo, Sigmo, Colo, I-FOBT, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT, Colo, I-FOBT, I-FOBT, Colo, Sigmo, Colo, I-FOBT, I-FOBT, Colo, Sigmo, Colo, Colo","1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 2, 1, 1, 1, 2, 1, 1, 1, 1, 1",1.2
+Random,2,Female,1.02,56,Cured,7,"Sigmo, Colo, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo","1, 1, 1, 1, 1, 1",1.0
+Random,3,Male,0.12,100,MaxAge,47,"I-FOBT, Colo, Sigmo, Sigmo, Sigmo, Colo, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, Colo, Colo, Sigmo, Colo, I-FOBT, Sigmo, Sigmo, I-FOBT, Sigmo, Colo, Sigmo, Colo, I-FOBT, I-FOBT, Sigmo, Sigmo, Colo, Colo, Sigmo, Sigmo, Colo, Sigmo, I-FOBT, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo, I-FOBT, I-FOBT, I-FOBT","1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1",1.1
+Random,4,Female,0.1,53,Natural,3,"I-FOBT, Colo, I-FOBT","1, 1",1.0
+Random,5,Female,0.27,58,Cured,8,"Sigmo, Colo, Colo, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo","1, 2, 1, 1, 1, 1, 1",1.1
+Random,6,Male,0.1,61,Natural,9,"Colo, Colo, I-FOBT, Colo, I-FOBT, Colo, Colo, Sigmo, Colo","2, 1, 1, 1, 2, 1, 1, 1",1.2
+Random,7,Male,1.4,84,Natural,28,"I-FOBT, Sigmo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Colo, Colo, Colo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Colo, Sigmo, Sigmo, Colo, I-FOBT, Sigmo","1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1",1.1
+Random,8,Female,1.47,57,Cured,7,"I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo","1, 1, 1, 2, 1, 1",1.2
+Random,9,Male,0.1,84,Natural,29,"Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Colo, I-FOBT, Colo, Colo, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, Colo, I-FOBT, Colo, Colo, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo, I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT, I-FOBT","1, 1, 1, 1, 1, 2, 3, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1",1.2
+Random,10,Male,0.1,77,Natural,21,"Colo, Colo, I-FOBT, Colo, I-FOBT, I-FOBT, Colo, Colo, I-FOBT, Sigmo, I-FOBT, Sigmo, I-FOBT, Sigmo, Sigmo, I-FOBT, Colo, Colo, Sigmo, I-FOBT, Sigmo","1, 1, 1, 1, 5, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1",1.3
+Random,11,Male,0.1,60,Natural,7,"I-FOBT, Sigmo, I-FOBT, Sigmo, Sigmo, Colo, Colo","1, 3, 2, 1, 1, 1",1.5
+Random,12,Female,1.31,77,Cured,22,"I-FOBT, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, Colo, Colo, Colo, Colo, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, Colo, Colo, Colo, I-FOBT, Sigmo","1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 1, 2, 1, 1, 1, 1, 2, 3, 1",1.3
+Random,13,Male,0.24,69,Natural,17,"I-FOBT, Sigmo, Colo, Sigmo, Sigmo, Colo, I-FOBT, Colo, I-FOBT, Colo, Colo, I-FOBT, Sigmo, Colo, Colo, Colo, I-FOBT","1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1",1.2
+Random,14,Male,1.29,84,Natural,26,"Colo, Colo, Colo, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, Sigmo, I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Sigmo, Colo, I-FOBT, Colo, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT","1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1, 3, 1",1.4
+Random,15,Female,0.1,61,Cured,7,"Sigmo, Colo, Colo, I-FOBT, I-FOBT, I-FOBT, Colo","1, 1, 4, 1, 2, 2",1.8
+Random,16,Male,0.84,77,Natural,21,"Sigmo, Colo, I-FOBT, I-FOBT, Colo, Sigmo, Colo, Sigmo, I-FOBT, I-FOBT, Colo, Colo, I-FOBT, Colo, Sigmo, Sigmo, I-FOBT, I-FOBT, Sigmo, Colo, Colo","1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 2, 2, 1, 2, 1, 1, 1, 1, 1",1.3
+Random,17,Female,0.1,93,Natural,36,"I-FOBT, Sigmo, Colo, I-FOBT, Sigmo, Colo, I-FOBT, Colo, Colo, I-FOBT, Sigmo, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, Colo, Sigmo, I-FOBT, Colo, Colo, Sigmo, I-FOBT, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, Colo","1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1",1.2
+Random,18,Male,0.1,63,Natural,8,"I-FOBT, Sigmo, Colo, Colo, Colo, Colo, Sigmo, Colo","1, 3, 1, 2, 1, 2, 1",1.6
+Random,19,Male,0.1,76,Natural,21,"Colo, Colo, Sigmo, Colo, I-FOBT, Sigmo, Colo, Colo, Colo, Colo, Colo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT, Colo, Colo, I-FOBT, Colo, Sigmo","1, 2, 1, 1, 1, 1, 2, 3, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1",1.3
+Random,20,Male,1.37,89,Natural,29,"Colo, Sigmo, Colo, I-FOBT, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Sigmo, I-FOBT, I-FOBT, Sigmo, Colo, I-FOBT, Colo, Colo, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, Colo, Sigmo, Colo","1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 3, 1, 1, 1, 2, 1, 1, 4, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1",1.4
+Random,21,Male,0.33,69,Natural,17,"Colo, Colo, Colo, Sigmo, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo, Sigmo, Colo, Sigmo, Colo, I-FOBT, Sigmo, Colo, I-FOBT","1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1",1.2
+Random,22,Male,5.0,75,Natural,20,"Sigmo, Colo, I-FOBT, I-FOBT, Colo, Colo, I-FOBT, Sigmo, Colo, Sigmo, Colo, I-FOBT, I-FOBT, Sigmo, Colo, Colo, I-FOBT, Sigmo, I-FOBT, Sigmo","1, 1, 3, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1",1.3
+Random,23,Male,0.23,94,Natural,28,"I-FOBT, Colo, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, I-FOBT, Colo, I-FOBT, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Colo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, Colo, Sigmo","1, 1, 1, 1, 4, 1, 4, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 2, 2, 5",1.6
+Random,24,Male,1.48,80,Natural,22,"Sigmo, Colo, Colo, I-FOBT, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo, I-FOBT, Colo, Sigmo, Colo, I-FOBT, Sigmo, Colo, Sigmo, Colo, Colo, I-FOBT, I-FOBT, Colo","1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 2, 1, 2, 3, 1, 2, 1, 1, 1",1.4
+Random,25,Female,0.38,71,Cured,18,"I-FOBT, I-FOBT, I-FOBT, Sigmo, Sigmo, Colo, I-FOBT, Colo, Sigmo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo, I-FOBT, Sigmo, I-FOBT, Sigmo","1, 1, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2",1.2
+Random,26,Male,0.1,67,Natural,10,"Colo, Sigmo, I-FOBT, I-FOBT, Colo, I-FOBT, Colo, Colo, I-FOBT, I-FOBT","3, 2, 3, 2, 1, 1, 2, 1, 1",1.8
+Random,27,Female,0.14,90,Natural,31,"Colo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, Sigmo, Colo, Colo, Colo, Sigmo, Colo, I-FOBT, I-FOBT, Sigmo, Sigmo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Colo, I-FOBT, Sigmo, Colo, Colo, Colo, I-FOBT, Sigmo, Colo, I-FOBT, Sigmo","1, 3, 1, 1, 1, 1, 3, 1, 1, 1, 1, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 2, 1, 1",1.3
+Random,28,Female,0.73,73,Natural,19,"Sigmo, Colo, Sigmo, Colo, Colo, Sigmo, Colo, I-FOBT, Colo, I-FOBT, Sigmo, Colo, Sigmo, Colo, Sigmo, Colo, Colo, I-FOBT, I-FOBT","1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 2, 1, 1, 1",1.2
+Random,29,Female,1.24,56,Cured,4,"Colo, Colo, Sigmo, Colo","4, 1, 1",2.0
+Random,30,Male,0.1,51,Natural,2,"Sigmo, Sigmo",1,1.0
+Random,31,Male,1.46,65,Natural,11,"I-FOBT, Sigmo, Sigmo, Sigmo, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo","1, 2, 1, 1, 1, 3, 1, 1, 1, 1",1.3
+Random,32,Male,0.15,85,Natural,26,"I-FOBT, Sigmo, Colo, Colo, Sigmo, Sigmo, Colo, I-FOBT, Colo, Colo, Colo, I-FOBT, I-FOBT, Sigmo, Colo, Colo, Colo, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, I-FOBT, I-FOBT, Colo, I-FOBT","1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 2, 1, 4, 1, 1, 1, 1, 1, 3, 1, 1, 1, 2, 1, 2",1.4
+Random,33,Female,0.33,69,Cured,16,"I-FOBT, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Colo, Sigmo, Colo, I-FOBT, I-FOBT, Colo","1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 3, 1, 1",1.3
+Random,34,Male,1.29,65,Natural,14,"I-FOBT, Colo, Colo, Colo, Sigmo, Sigmo, I-FOBT, I-FOBT, I-FOBT, Sigmo, I-FOBT, Colo, I-FOBT, I-FOBT","1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2",1.1
+Random,35,Female,0.56,55,Natural,2,"I-FOBT, Sigmo",2,2.0
+Random,36,Female,1.27,55,Cured,5,"I-FOBT, Colo, I-FOBT, I-FOBT, Colo","1, 2, 1, 1",1.2
+Random,37,Male,0.32,73,Natural,17,"Sigmo, Colo, I-FOBT, Colo, Sigmo, Colo, Sigmo, Colo, I-FOBT, Sigmo, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, Colo, Sigmo","1, 1, 1, 2, 1, 1, 2, 2, 1, 1, 1, 1, 3, 1, 2, 1",1.4
+Random,38,Female,0.1,84,Natural,24,"Colo, Colo, I-FOBT, I-FOBT, I-FOBT, Colo, I-FOBT, Colo, Colo, Sigmo, Colo, I-FOBT, Colo, Sigmo, I-FOBT, Colo, I-FOBT, Colo, Colo, Colo, Sigmo, Colo, Sigmo, I-FOBT","1, 3, 1, 4, 1, 1, 3, 2, 2, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1",1.5
+Random,39,Male,1.32,88,Natural,28,"Colo, I-FOBT, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Colo, Colo, I-FOBT, I-FOBT, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, Colo, Sigmo, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, I-FOBT","1, 4, 1, 1, 3, 1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 2, 1",1.4
+Random,40,Female,0.1,90,Natural,35,"Sigmo, Sigmo, Colo, Colo, Colo, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, Colo, I-FOBT, Colo, Colo, I-FOBT, I-FOBT, I-FOBT, Colo, Colo, I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT, Colo, Sigmo, Sigmo, I-FOBT, Sigmo, I-FOBT, I-FOBT, Colo, I-FOBT, I-FOBT, Sigmo","1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2",1.2
+Random,41,Male,0.38,92,Natural,31,"Colo, I-FOBT, Sigmo, I-FOBT, Colo, Sigmo, Colo, Colo, Colo, Colo, I-FOBT, I-FOBT, Sigmo, Colo, Sigmo, Sigmo, Colo, I-FOBT, Colo, Sigmo, I-FOBT, Colo, Colo, I-FOBT, Colo, Colo, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo","1, 1, 2, 1, 1, 1, 1, 2, 3, 1, 1, 3, 1, 1, 1, 1, 2, 2, 1, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1",1.4
+Random,42,Female,1.3,63,Cured,13,"Colo, Colo, Sigmo, Colo, I-FOBT, Sigmo, I-FOBT, Sigmo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo","1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2",1.1
+Random,43,Female,0.1,61,Cured,9,"Sigmo, Colo, Sigmo, Sigmo, Colo, Sigmo, I-FOBT, I-FOBT, Colo","1, 2, 1, 1, 1, 2, 1, 2",1.4
+Random,44,Male,0.1,87,Natural,27,"Sigmo, Sigmo, I-FOBT, Sigmo, I-FOBT, Sigmo, Sigmo, Colo, Colo, I-FOBT, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Colo, Colo, Colo, Colo, Colo, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, Colo","1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 4, 1, 2, 1, 1, 1, 2, 1, 1, 1, 1, 2, 3, 2, 1, 1",1.4
+Random,45,Female,1.31,72,Cured,19,"Sigmo, Sigmo, Colo, Sigmo, Sigmo, Sigmo, Sigmo, Colo, Colo, Sigmo, Sigmo, I-FOBT, I-FOBT, Colo, Colo, Colo, I-FOBT, Sigmo, Colo","1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 3",1.2
+Random,46,Male,1.41,82,Natural,24,"I-FOBT, I-FOBT, Colo, I-FOBT, I-FOBT, Sigmo, I-FOBT, Colo, I-FOBT, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, Sigmo, Colo","2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 2, 1, 1, 1, 3, 1, 2, 1",1.4
+Random,47,Male,1.4,82,Natural,26,"I-FOBT, Colo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, I-FOBT, I-FOBT, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, Sigmo, I-FOBT, I-FOBT, I-FOBT, Colo","1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 4, 1, 1",1.2
+Random,48,Female,0.34,56,Cured,5,"Sigmo, I-FOBT, I-FOBT, I-FOBT, Colo","2, 2, 1, 1",1.5
+Random,49,Male,0.1,64,Natural,10,"Colo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, I-FOBT, Colo, I-FOBT, Sigmo","1, 1, 2, 2, 3, 1, 1, 1, 1",1.4
+Random,50,Female,5.0,57,Cured,5,"Colo, I-FOBT, I-FOBT, I-FOBT, Colo","4, 1, 1, 1",1.8
+Random,51,Male,1.01,80,Natural,18,"Colo, Colo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, Colo, Sigmo, Colo, I-FOBT, Sigmo, Colo, Colo, Colo, I-FOBT","1, 2, 1, 1, 1, 3, 2, 2, 2, 1, 1, 2, 4, 2, 1, 1, 1",1.6
+Random,52,Female,0.29,67,Natural,12,"Sigmo, Colo, Colo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Colo, Sigmo, I-FOBT, Colo","1, 1, 1, 3, 1, 1, 1, 3, 1, 1, 3",1.5
+Random,53,Female,0.17,90,Natural,31,"Sigmo, Sigmo, Colo, Sigmo, Sigmo, Sigmo, Colo, Sigmo, Sigmo, Sigmo, Colo, I-FOBT, Sigmo, I-FOBT, Colo, Colo, Colo, Colo, Sigmo, Sigmo, Colo, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT","2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3",1.3
+Random,54,Male,0.1,76,Natural,22,"Colo, Sigmo, Colo, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Colo, Sigmo, Colo, Colo, I-FOBT, Sigmo, Colo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo","1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1",1.2
+Random,55,Female,0.13,59,Natural,6,"Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, Colo","1, 1, 1, 2, 2",1.4
+Random,56,Female,0.11,100,MaxAge,36,"Sigmo, Colo, Sigmo, Colo, I-FOBT, I-FOBT, Colo, Colo, Colo, Colo, Colo, Sigmo, Colo, I-FOBT, Colo, Colo, Colo, I-FOBT, Sigmo, Colo, I-FOBT, I-FOBT, Colo, Sigmo, I-FOBT, Sigmo, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo, I-FOBT","1, 1, 2, 1, 2, 1, 2, 2, 1, 1, 3, 2, 1, 1, 1, 3, 1, 2, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2",1.4
+Random,57,Male,0.1,75,Natural,20,"Sigmo, Colo, Sigmo, Colo, Sigmo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Colo, I-FOBT, Sigmo, Colo, I-FOBT, Colo, Colo, Colo, I-FOBT, Colo","1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 2, 1, 1, 2, 1",1.3
+Random,58,Male,5.0,66,Natural,11,"I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo, I-FOBT, I-FOBT, Colo, Colo, Sigmo, Sigmo","1, 1, 2, 1, 2, 1, 1, 3, 1, 1",1.4
+Random,59,Male,0.1,74,Natural,19,"Sigmo, I-FOBT, Colo, Sigmo, I-FOBT, I-FOBT, I-FOBT, Colo, Sigmo, Colo, Colo, Colo, I-FOBT, Sigmo, I-FOBT, I-FOBT, I-FOBT, Colo, Colo","1, 1, 1, 2, 2, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1",1.3
+Random,60,Female,0.1,80,Natural,27,"Colo, Colo, Colo, Colo, I-FOBT, Sigmo, Colo, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT, Sigmo, Colo, Colo, I-FOBT, Sigmo, Colo, Colo, Colo, Colo, Colo","1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2",1.2
+Random,61,Male,1.23,87,Natural,27,"Colo, Sigmo, Colo, Colo, I-FOBT, Sigmo, I-FOBT, Colo, Colo, Sigmo, Colo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Colo, Colo, Colo, I-FOBT, Colo, I-FOBT, Colo, Colo, I-FOBT","1, 3, 1, 3, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1",1.4
+Random,62,Female,0.35,67,Cured,12,"I-FOBT, Sigmo, I-FOBT, Sigmo, I-FOBT, Sigmo, Colo, Colo, Colo, I-FOBT, I-FOBT, Colo","1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1",1.4
+Random,63,Male,0.73,74,Natural,16,"Colo, Sigmo, I-FOBT, Sigmo, I-FOBT, Sigmo, I-FOBT, Colo, Sigmo, I-FOBT, Sigmo, I-FOBT, Sigmo, Sigmo, I-FOBT, I-FOBT","3, 4, 1, 1, 3, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2",1.6
+Random,64,Female,4.96,57,Cured,6,"I-FOBT, Colo, Colo, Colo, I-FOBT, Colo","1, 1, 1, 1, 2",1.2
+Random,65,Female,1.44,70,Natural,18,"I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, Colo, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Colo, I-FOBT, Colo, Colo, I-FOBT, Sigmo, I-FOBT","1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1",1.1
+Random,66,Female,0.3,71,Cancer,17,"Colo, Sigmo, Sigmo, I-FOBT, I-FOBT, I-FOBT, Sigmo, I-FOBT, Sigmo, I-FOBT, Colo, I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo","1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2",1.2
+Random,67,Male,1.3,86,Natural,24,"Sigmo, I-FOBT, Sigmo, Colo, Colo, Colo, Sigmo, Colo, Colo, I-FOBT, Colo, I-FOBT, I-FOBT, Sigmo, Sigmo, I-FOBT, Colo, Sigmo, I-FOBT, Sigmo, I-FOBT, Sigmo, Sigmo, Sigmo","1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 1, 1, 3, 1, 2, 1, 3, 2, 1, 1, 3, 1",1.4
+Random,68,Male,2.18,58,Natural,8,"Sigmo, Sigmo, Colo, Sigmo, I-FOBT, Colo, I-FOBT, I-FOBT","1, 1, 1, 1, 1, 1, 1",1.0
+Random,69,Male,5.0,78,Natural,24,"I-FOBT, I-FOBT, Colo, Colo, I-FOBT, Sigmo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, Sigmo, I-FOBT, Sigmo, Sigmo, Colo, Sigmo, Sigmo, Colo, Sigmo, I-FOBT","1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 4, 1",1.2
+Random,70,Male,0.37,82,Natural,27,"Sigmo, Sigmo, Colo, Sigmo, I-FOBT, Colo, Sigmo, Sigmo, Colo, Sigmo, Sigmo, Sigmo, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT, Colo, Sigmo, Colo, I-FOBT, Colo, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo","1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1",1.2
+Random,71,Male,0.1,90,Natural,31,"Sigmo, Colo, I-FOBT, I-FOBT, Colo, Colo, I-FOBT, Colo, Colo, I-FOBT, Colo, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, I-FOBT, Sigmo, Sigmo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, Colo, Sigmo, Sigmo, I-FOBT, Colo, Colo, I-FOBT","3, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1",1.3
+Random,72,Male,0.18,77,Natural,22,"I-FOBT, I-FOBT, I-FOBT, I-FOBT, Colo, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo, I-FOBT, Sigmo","1, 3, 1, 1, 1, 2, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1",1.3
+Random,73,Male,0.14,79,Natural,23,"I-FOBT, I-FOBT, Sigmo, Colo, I-FOBT, Sigmo, Colo, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT, Colo, Sigmo, I-FOBT, I-FOBT, Colo, I-FOBT, Sigmo, Sigmo, Sigmo, Colo, I-FOBT","1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 2",1.2
+Random,74,Male,1.25,98,Natural,32,"Sigmo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Colo, Sigmo, Sigmo, Colo, I-FOBT, Colo, Sigmo, Sigmo, Colo, I-FOBT, I-FOBT, Sigmo, Colo, Sigmo, Sigmo, Colo, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, I-FOBT","1, 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 2, 2, 1, 3, 1, 4, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 2, 1",1.5
+Random,75,Male,0.6,58,Natural,6,"Colo, I-FOBT, Colo, Colo, I-FOBT, Colo","1, 1, 3, 1, 1",1.4
+Random,76,Male,0.1,88,Natural,32,"I-FOBT, Colo, Sigmo, Colo, Colo, Colo, Colo, I-FOBT, Colo, Colo, Sigmo, I-FOBT, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, Colo, I-FOBT, Sigmo, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT, Colo, I-FOBT, Colo, I-FOBT","1, 2, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1",1.2
+Random,77,Male,0.35,72,Natural,18,"Colo, Sigmo, Colo, Colo, Colo, I-FOBT, Sigmo, Sigmo, Colo, Colo, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Colo, Colo, Sigmo","1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1",1.2
+Random,78,Female,1.45,54,Cured,5,"Colo, I-FOBT, Sigmo, I-FOBT, Colo","1, 1, 1, 1",1.0
+Random,79,Female,0.29,61,Cured,7,"Sigmo, Sigmo, I-FOBT, Sigmo, Colo, I-FOBT, Colo","2, 1, 1, 1, 1, 5",1.8
+Random,80,Female,0.19,78,Natural,28,"I-FOBT, Colo, Sigmo, I-FOBT, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, Colo, Colo, Colo, I-FOBT, Colo, Colo, Sigmo, I-FOBT, Colo, Sigmo, Colo, I-FOBT, Colo, Colo, Sigmo, Sigmo","1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1",1.0
+Random,81,Male,5.0,99,Natural,37,"I-FOBT, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, Colo, Colo, Sigmo, Sigmo, Sigmo, Colo, Sigmo, Sigmo, Sigmo, Colo, Sigmo, Colo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT, Sigmo, Colo, I-FOBT, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, Colo","1, 2, 1, 1, 1, 1, 1, 2, 2, 1, 2, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1, 1, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1",1.3
+Random,82,Male,0.1,65,Natural,12,"Sigmo, I-FOBT, Sigmo, Sigmo, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Colo, Sigmo, Colo","1, 1, 1, 3, 2, 1, 1, 1, 1, 1, 1",1.3
+Random,83,Male,0.22,70,Natural,15,"Colo, Colo, I-FOBT, Sigmo, Sigmo, I-FOBT, Colo, Colo, Sigmo, I-FOBT, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT","1, 1, 1, 3, 1, 1, 3, 2, 1, 1, 1, 1, 2, 1",1.4
+Random,84,Male,0.3,60,Natural,10,"I-FOBT, Colo, I-FOBT, Sigmo, Colo, Sigmo, Sigmo, Sigmo, I-FOBT, I-FOBT","2, 1, 1, 1, 1, 1, 1, 1, 1",1.1
+Random,85,Male,0.1,84,Natural,29,"Sigmo, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo, I-FOBT, Sigmo, I-FOBT, Sigmo, Sigmo, I-FOBT, I-FOBT, Colo, Colo, Sigmo, Colo, Sigmo, Colo, I-FOBT, I-FOBT, I-FOBT, Colo, I-FOBT, Sigmo, Colo, Sigmo, Colo, I-FOBT","1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 3, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1",1.2
+Random,86,Male,0.5,62,Natural,12,"I-FOBT, Colo, I-FOBT, Colo, Colo, I-FOBT, Sigmo, Sigmo, I-FOBT, Sigmo, Colo, I-FOBT","2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1",1.1
+Random,87,Female,0.1,94,Natural,32,"Colo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Colo, I-FOBT, Sigmo, I-FOBT, Colo, I-FOBT, Colo, I-FOBT, Colo, I-FOBT, Sigmo, Colo, Colo, I-FOBT, Colo, I-FOBT, Colo","1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 3, 1, 2, 1, 6, 1, 1, 1, 1, 1, 1",1.4
+Random,88,Female,0.1,55,Natural,4,"I-FOBT, Sigmo, Sigmo, Colo","2, 2, 1",1.7
+Random,89,Male,0.1,70,Natural,14,"Sigmo, I-FOBT, Sigmo, Colo, Sigmo, Sigmo, Sigmo, Colo, I-FOBT, I-FOBT, Colo, Sigmo, Sigmo, Sigmo","1, 1, 3, 1, 1, 1, 1, 1, 2, 1, 1, 3, 3",1.5
+Random,90,Female,0.1,98,Natural,40,"Colo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo, I-FOBT, Colo, Sigmo, Sigmo, I-FOBT, I-FOBT, Colo, Colo, I-FOBT, I-FOBT, Sigmo, Colo, Colo, Colo, Sigmo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, Sigmo, I-FOBT, I-FOBT, Colo, Colo, Sigmo, Colo, I-FOBT, Sigmo, Sigmo, I-FOBT","2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 3, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1",1.2
+Random,91,Male,0.1,88,Natural,30,"I-FOBT, I-FOBT, Colo, I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, Sigmo, Sigmo, I-FOBT, I-FOBT, Colo, Sigmo, Colo, Sigmo, I-FOBT, Sigmo, Sigmo, Colo, Colo, Colo, Sigmo, Sigmo, Colo, I-FOBT, Colo","1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1",1.2
+Random,92,Male,0.71,55,Natural,6,"Colo, I-FOBT, Sigmo, Sigmo, Colo, Colo","1, 1, 1, 1, 1",1.0
+Random,93,Female,0.11,56,Cured,3,"Sigmo, I-FOBT, Sigmo","3, 3",3.0
+Random,94,Female,1.31,59,Cured,9,"Colo, Colo, Colo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo, Colo","1, 1, 2, 1, 1, 1, 1, 1",1.1
+Random,95,Female,0.72,90,Cured,34,"I-FOBT, I-FOBT, Colo, Sigmo, Colo, Sigmo, Sigmo, I-FOBT, I-FOBT, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Colo, Colo, I-FOBT, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo, Sigmo, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo, I-FOBT, I-FOBT, Sigmo, Sigmo","1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1",1.2
+Random,96,Male,0.96,81,Natural,21,"Sigmo, I-FOBT, Colo, I-FOBT, Colo, Sigmo, Colo, Sigmo, Sigmo, I-FOBT, Colo, I-FOBT, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, Colo, Colo, Sigmo, I-FOBT","1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 2, 2, 3, 2, 1, 2, 3, 1, 1, 1",1.5
+Random,97,Male,0.1,94,Natural,33,"I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, Colo, Sigmo, I-FOBT, I-FOBT, Colo, Colo, Sigmo, Sigmo, Colo, Sigmo, I-FOBT, I-FOBT, Sigmo, Sigmo, Colo, Sigmo, Colo, Colo, I-FOBT, Sigmo, Sigmo, I-FOBT, Sigmo, I-FOBT, Colo, Sigmo, Sigmo, Sigmo","1, 1, 1, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1",1.3
+Random,98,Male,4.96,82,Natural,25,"Colo, Sigmo, Colo, I-FOBT, Colo, Sigmo, I-FOBT, Sigmo, Sigmo, Colo, Colo, Colo, I-FOBT, Colo, Colo, Sigmo, Sigmo, I-FOBT, Sigmo, Colo, Colo, Sigmo, Colo, I-FOBT, I-FOBT","2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1",1.3
+Random,99,Male,0.1,95,Natural,32,"Sigmo, Sigmo, Sigmo, Sigmo, Colo, I-FOBT, I-FOBT, Sigmo, Sigmo, I-FOBT, Sigmo, Sigmo, Sigmo, Colo, I-FOBT, Sigmo, Colo, I-FOBT, Colo, I-FOBT, Sigmo, I-FOBT, Colo, Colo, Colo, Colo, Sigmo, Sigmo, Colo, Colo, Sigmo, Colo","1, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 2, 1, 1, 1, 2, 1, 1, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1",1.4
+Random,100,Female,0.1,77,Natural,21,"Sigmo, Colo, Colo, Colo, Sigmo, I-FOBT, I-FOBT, I-FOBT, I-FOBT, I-FOBT, Sigmo, Sigmo, Sigmo, Colo, Colo, Sigmo, Colo, Colo, I-FOBT, I-FOBT, Sigmo","1, 1, 1, 1, 1, 1, 2, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2",1.3
+PPO_AI,1,Male,0.29,86,Natural,0,,,-
+PPO_AI,2,Female,0.15,60,Natural,0,,,-
+PPO_AI,3,Female,0.2,93,Natural,0,,,-
+PPO_AI,4,Female,3.57,59,Natural,0,,,-
+PPO_AI,5,Male,0.38,83,Natural,0,,,-
+PPO_AI,6,Female,1.0,57,Natural,0,,,-
+PPO_AI,7,Female,0.59,62,Natural,0,,,-
+PPO_AI,8,Male,0.18,92,Natural,0,,,-
+PPO_AI,9,Female,0.1,95,Natural,0,,,-
+PPO_AI,10,Male,0.1,72,Natural,0,,,-
+PPO_AI,11,Male,5.0,78,Natural,0,,,-
+PPO_AI,12,Male,0.24,70,Natural,0,,,-
+PPO_AI,13,Female,0.13,76,Cured,2,"I-FOBT, Colo",1,1.0
+PPO_AI,14,Male,1.17,100,MaxAge,0,,,-
+PPO_AI,15,Male,0.67,82,Natural,0,,,-
+PPO_AI,16,Female,0.71,64,Natural,0,,,-
+PPO_AI,17,Female,0.1,59,Natural,0,,,-
+PPO_AI,18,Male,1.48,84,Natural,0,,,-
+PPO_AI,19,Female,0.11,61,Natural,0,,,-
+PPO_AI,20,Female,0.15,76,Natural,0,,,-
+PPO_AI,21,Male,0.12,69,Natural,0,,,-
+PPO_AI,22,Male,0.1,80,Natural,0,,,-
+PPO_AI,23,Female,0.1,71,Natural,0,,,-
+PPO_AI,24,Male,1.35,93,Natural,0,,,-
+PPO_AI,25,Male,0.41,89,Natural,0,,,-
+PPO_AI,26,Female,0.1,69,Natural,0,,,-
+PPO_AI,27,Female,0.1,71,Natural,0,,,-
+PPO_AI,28,Male,0.59,90,Natural,0,,,-
+PPO_AI,29,Male,0.49,77,Natural,0,,,-
+PPO_AI,30,Female,0.33,59,Natural,0,,,-
+PPO_AI,31,Female,0.24,80,Natural,0,,,-
+PPO_AI,32,Male,1.35,63,Natural,0,,,-
+PPO_AI,33,Male,0.17,65,Natural,0,,,-
+PPO_AI,34,Male,0.53,80,Natural,0,,,-
+PPO_AI,35,Female,0.18,77,Natural,0,,,-
+PPO_AI,36,Male,1.37,90,Natural,0,,,-
+PPO_AI,37,Female,0.1,97,Natural,0,,,-
+PPO_AI,38,Female,0.82,57,Natural,0,,,-
+PPO_AI,39,Male,1.41,100,MaxAge,0,,,-
+PPO_AI,40,Female,0.67,58,Natural,0,,,-
+PPO_AI,41,Male,0.1,82,Natural,0,,,-
+PPO_AI,42,Male,1.24,91,Natural,0,,,-
+PPO_AI,43,Female,0.52,59,Natural,0,,,-
+PPO_AI,44,Female,0.62,60,Natural,0,,,-
+PPO_AI,45,Female,0.1,87,Natural,0,,,-
+PPO_AI,46,Female,0.33,60,Natural,0,,,-
+PPO_AI,47,Male,0.14,87,Natural,0,,,-
+PPO_AI,48,Female,0.1,80,Natural,0,,,-
+PPO_AI,49,Male,0.11,98,Natural,0,,,-
+PPO_AI,50,Female,1.41,59,Natural,0,,,-
+PPO_AI,51,Female,1.45,57,Natural,0,,,-
+PPO_AI,52,Female,0.21,66,Natural,0,,,-
+PPO_AI,53,Male,0.18,94,Natural,0,,,-
+PPO_AI,54,Male,0.1,91,Natural,0,,,-
+PPO_AI,55,Female,1.02,63,Natural,0,,,-
+PPO_AI,56,Male,0.2,85,Natural,0,,,-
+PPO_AI,57,Female,1.26,61,Natural,0,,,-
+PPO_AI,58,Male,0.53,100,MaxAge,0,,,-
+PPO_AI,59,Female,0.1,66,Natural,0,,,-
+PPO_AI,60,Male,0.12,93,Natural,0,,,-
+PPO_AI,61,Female,0.86,57,Natural,0,,,-
+PPO_AI,62,Male,0.1,90,Natural,0,,,-
+PPO_AI,63,Male,0.1,67,Natural,0,,,-
+PPO_AI,64,Female,0.1,56,Natural,0,,,-
+PPO_AI,65,Male,1.45,89,Natural,0,,,-
+PPO_AI,66,Male,0.1,76,Natural,0,,,-
+PPO_AI,67,Female,0.28,87,Natural,0,,,-
+PPO_AI,68,Male,1.36,79,Natural,0,,,-
+PPO_AI,69,Female,0.1,81,Natural,0,,,-
+PPO_AI,70,Female,0.2,60,Natural,0,,,-
+PPO_AI,71,Female,0.44,64,Natural,0,,,-
+PPO_AI,72,Male,0.1,85,Natural,0,,,-
+PPO_AI,73,Female,0.1,83,Natural,0,,,-
+PPO_AI,74,Female,0.1,74,Natural,0,,,-
+PPO_AI,75,Female,5.0,57,Cancer,0,,,-
+PPO_AI,76,Male,0.11,97,Natural,0,,,-
+PPO_AI,77,Male,0.51,75,Natural,0,,,-
+PPO_AI,78,Male,0.12,62,Natural,0,,,-
+PPO_AI,79,Male,0.1,96,Natural,0,,,-
+PPO_AI,80,Male,1.1,63,Natural,0,,,-
+PPO_AI,81,Male,1.29,58,Natural,0,,,-
+PPO_AI,82,Male,0.1,94,Natural,0,,,-
+PPO_AI,83,Female,5.0,56,Cured,2,"I-FOBT, Colo",1,1.0
+PPO_AI,84,Male,1.43,65,Natural,0,,,-
+PPO_AI,85,Female,0.14,76,Natural,0,,,-
+PPO_AI,86,Male,0.1,89,Natural,0,,,-
+PPO_AI,87,Male,0.13,100,MaxAge,0,,,-
+PPO_AI,88,Female,5.0,54,Natural,0,,,-
+PPO_AI,89,Female,0.25,68,Natural,0,,,-
+PPO_AI,90,Female,1.32,60,Natural,0,,,-
+PPO_AI,91,Male,4.96,79,Natural,0,,,-
+PPO_AI,92,Male,0.1,78,Natural,0,,,-
+PPO_AI,93,Female,0.71,67,Natural,0,,,-
+PPO_AI,94,Male,0.1,78,Natural,0,,,-
+PPO_AI,95,Male,0.1,75,Natural,0,,,-
+PPO_AI,96,Male,0.1,57,Natural,0,,,-
+PPO_AI,97,Female,0.1,80,Natural,0,,,-
+PPO_AI,98,Female,1.34,56,Natural,0,,,-
+PPO_AI,99,Female,0.1,74,Natural,0,,,-
+PPO_AI,100,Female,1.24,59,Natural,0,,,-

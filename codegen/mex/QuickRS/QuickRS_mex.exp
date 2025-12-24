@@ -1,0 +1,10 @@
+QuickRS_mex.mexw64
+QuickRS		QuickRS
+QuickRS_atexit		QuickRS_atexit
+QuickRS_initialize		QuickRS_initialize
+QuickRS_terminate		QuickRS_terminate
+emlrtMexFcnProperties		emlrtMexFcnProperties
+emxEnsureCapacity		emxEnsureCapacity
+emxFree_real_T		emxFree_real_T
+emxInit_real_T		emxInit_real_T
+mexFunction		mexFunction

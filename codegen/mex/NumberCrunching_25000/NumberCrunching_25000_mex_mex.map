@@ -1,0 +1,17 @@
+MEX {
+	global:
+		mexFunction;
+		emlrtMexFcnProperties;
+		NumberCrunching_25000;
+		b_emlrt_marshallOut;
+		emxEnsureCapacity;
+		emxFree_int32_T;
+		emxFree_real_T;
+		emxInit_int32_T;
+		emxInit_real_T;
+		NumberCrunching_25000_initialize;
+		NumberCrunching_25000_terminate;
+		NumberCrunching_25000_atexit;
+	local:
+		*;
+};
