@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Data files
+*.pkl
+*.pth
+*.h5
+*.npy
+
+# Logs
+*.log
+runs/
+
+# OS
+.DS_Store
+.obsidian/
+
+# Outputs
+output/
+results/
