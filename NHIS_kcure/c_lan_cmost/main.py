@@ -15,6 +15,7 @@ from optimizer import GeneticOptimizer      # Mode 1
 from dp_optimizer import DPOptimizer        # Mode 4
 from drl_optimizer import PPOOptimizer      # Mode 5 (New)
 from cql_optimizer import CQLOptimizer      # Mode 6 (New)
+from dp_true_optimizer import TrueDPOptimizer  # Mode 7 (True DP)
 
 def worker_simulation(args):
     """개별 프로세스가 수행하는 시뮬레이션 작업 (Mode 2, 3용)"""
@@ -81,9 +82,10 @@ def main():
     print("  [4] Dynamic Programming (Simulation-based DP)")
     print("  [5] ★ Deep RL (PPO) - Online Learning")
     print("  [6] ★ Offline RL (CQL) - Data-Driven")
+    print("  [7] ★ True DP (Analytical Transition Matrix)")
     print("  [0] Exit")
     
-    choice = input("\nEnter choice (1-6, 0): ").strip()
+    choice = input("\nEnter choice (1-7, 0): ").strip()
 
     # --- [Mode 1] Genetic Optimization ---
     if choice == '1':
@@ -171,6 +173,18 @@ def main():
         cql = CQLOptimizer(settings_file)
         cql.train(iterations=100000)
         cql.print_sample_decisions()
+
+    # --- [Mode 7] True Dynamic Programming ---
+    elif choice == '7':
+        print("\n" + "-"*60)
+        print(" [MODE 7] True Dynamic Programming Selected")
+        print("          Method: Analytical Transition Matrix from Parameters")
+        print("          (No simulation required)")
+        print("-" * 60)
+        
+        dp_true = TrueDPOptimizer(settings_file)
+        dp_true.solve()
+        dp_true.print_optimal_policy()
 
     # --- Exit ---
     elif choice == '0':
