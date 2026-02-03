@@ -1090,9 +1090,9 @@ class TrueDPOptimizer:
         csv_path = os.path.join(output_dir, f"{base_name}_{timestamp}.csv")
         with open(csv_path, 'w') as f:
             if self.max_screens > 0:
-                # 4D: screens_used=0인 경우만 CSV로
+                # 4D: 모든 screens_used 값 포함
                 f.write("age,history,screens_used,action\n")
-                for t in range(self.min_age, self.max_age + 1):
+                for t in range(40, 81):  # 40-80세
                     for h in range(self.max_history + 1):
                         for n in range(self.max_screens + 1):
                             action = self.Policy[t, h, n]
@@ -1100,7 +1100,7 @@ class TrueDPOptimizer:
             else:
                 # 3D
                 f.write("age,history,action\n")
-                for t in range(self.min_age, self.max_age + 1):
+                for t in range(40, 81):  # 40-80세
                     for h in range(self.max_history + 1):
                         action = self.Policy[t, h]
                         f.write(f"{t},{h},{action}\n")
