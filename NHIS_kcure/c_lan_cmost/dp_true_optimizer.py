@@ -170,22 +170,66 @@ class TransitionMatrixCalculator:
     """
     Calculates the 6x6 transition matrix for each age from settings.ini parameters.
     
-    The transition matrix T[age][s1][s2] represents P(next_state = s2 | current_state = s1, age)
+    The transition matrix T[age][risk_class][s1][s2] represents 
+    P(next_state = s2 | current_state = s1, age, risk_class)
+    
+    Risk classes represent individual variation in polyp incidence risk,
+    similar to how entities.py uses individual_polyp_risk.
     """
     
-    def __init__(self, params: SimulationParameters):
+    def __init__(self, params: SimulationParameters, n_risk_classes: int = 5):
         self.params = params
         self.n_states = 6
         self.max_age = 100
+        self.n_risk_classes = n_risk_classes
         
-        # Pre-compute transition matrices for all ages
-        self.transition_matrices = np.zeros((self.max_age + 1, self.n_states, self.n_states))
+        # Compute risk multipliers from individual_polyp_risk distribution
+        self.risk_multipliers = self._compute_risk_multipliers()
+        self.risk_class_probs = np.ones(n_risk_classes) / n_risk_classes  # Equal probability
+        
+        # Pre-compute transition matrices for all ages and risk classes
+        # Shape: (max_age+1, n_risk_classes, n_states, n_states)
+        self.transition_matrices = np.zeros((self.max_age + 1, self.n_risk_classes, 
+                                              self.n_states, self.n_states))
         self._compute_all_matrices()
     
+    def _compute_risk_multipliers(self) -> np.ndarray:
+        """
+        Compute risk multipliers for each risk class using log-scale spacing.
+        
+        The multipliers are evenly spaced on a log scale such that:
+        - Class 0 (lowest risk): 1/sqrt(10) ≈ 0.316
+        - Class n-1 (highest risk): sqrt(10) ≈ 3.162
+        - Ratio between highest and lowest: exactly 10x
+        - Middle class: 1.0 (baseline)
+        
+        Formula: multiplier[i] = 10^(-0.5 + i/(n-1))
+        
+        For n=5 classes:
+          Class 0: 10^(-0.5) = 0.316 (1/sqrt(10))
+          Class 1: 10^(-0.25) = 0.562
+          Class 2: 10^(0) = 1.0 (baseline)
+          Class 3: 10^(0.25) = 1.778
+          Class 4: 10^(0.5) = 3.162 (sqrt(10))
+        """
+        multipliers = np.zeros(self.n_risk_classes)
+        
+        if self.n_risk_classes == 1:
+            multipliers[0] = 1.0
+        else:
+            for i in range(self.n_risk_classes):
+                # Exponent ranges from -0.5 to 0.5 (log10 scale)
+                exponent = -0.5 + i / (self.n_risk_classes - 1)
+                multipliers[i] = 10 ** exponent
+        
+        return multipliers
+    
     def _compute_all_matrices(self):
-        """Pre-compute transition matrices for all ages."""
+        """Pre-compute transition matrices for all ages and risk classes."""
         for age in range(self.max_age + 1):
-            self.transition_matrices[age] = self._compute_matrix_for_age(age)
+            for risk_class in range(self.n_risk_classes):
+                self.transition_matrices[age, risk_class] = self._compute_matrix_for_age(
+                    age, risk_class)
     
     def _get_background_mortality(self, age: int) -> float:
         """Get background (non-cancer) mortality probability at given age."""
@@ -201,23 +245,33 @@ class TransitionMatrixCalculator:
         
         return (1 - p_female) * p_death_male + p_female * p_death_female
     
-    def _get_polyp_incidence(self, age: int) -> float:
-        """Get probability of developing a new polyp at given age."""
+    def _get_polyp_incidence(self, age: int, risk_class: int = -1) -> float:
+        """
+        Get probability of developing a new polyp at given age.
+        
+        Args:
+            age: Current age
+            risk_class: Risk class index (0 to n_risk_classes-1).
+                        If -1, uses average risk (for backward compatibility).
+        """
         if age < 0 or age >= len(self.params.general_new_polyps_risk):
             return 0.0
         
         # Base risk from settings
         base_risk = self.params.general_new_polyps_risk[age]
         
-        # Average individual risk multiplier
-        avg_indiv_risk = np.mean(self.params.individual_polyp_risk) if len(self.params.individual_polyp_risk) > 0 else 1.0
+        # Individual risk multiplier based on risk class
+        if risk_class >= 0 and risk_class < self.n_risk_classes:
+            indiv_risk = self.risk_multipliers[risk_class]
+        else:
+            # Use average (backward compatibility)
+            indiv_risk = np.mean(self.params.individual_polyp_risk) if len(self.params.individual_polyp_risk) > 0 else 1.0
         
         # Adjust for dt (simulation time step) - annualize if needed
-        # The base risk is per dt, so multiply by steps_per_year to get annual rate
         steps_per_year = int(1.0 / self.params.dt)
         
         # Convert per-step risk to annual risk: P_annual = 1 - (1 - p_step)^steps
-        p_step = base_risk * avg_indiv_risk
+        p_step = base_risk * indiv_risk
         p_annual = 1 - (1 - p_step) ** steps_per_year
         
         return min(p_annual, 1.0)
@@ -381,15 +435,19 @@ class TransitionMatrixCalculator:
         
         return np.mean(mortality_rates) if mortality_rates else 0.05
     
-    def _compute_matrix_for_age(self, age: int) -> np.ndarray:
+    def _compute_matrix_for_age(self, age: int, risk_class: int = -1) -> np.ndarray:
         """
-        Compute the 6x6 transition matrix for a given age.
+        Compute the 6x6 transition matrix for a given age and risk class.
+        
+        Args:
+            age: Current age
+            risk_class: Risk class index (0 to n_risk_classes-1). -1 for average.
         """
         T = np.zeros((self.n_states, self.n_states))
         
-        # Get all probabilities for this age
+        # Get all probabilities for this age and risk class
         p_death_bg = self._get_background_mortality(age)
-        p_polyp = self._get_polyp_incidence(age)
+        p_polyp = self._get_polyp_incidence(age, risk_class)  # Risk-class specific!
         p_early_prog, p_adv_prog = self._get_polyp_progression(age)
         p_fast_early, p_fast_adv = self._get_fast_cancer_rate()
         p_heal_early, p_heal_adv = self._get_healing_rate()
@@ -490,22 +548,37 @@ class TransitionMatrixCalculator:
         
         return T
     
-    def get_matrix(self, age: int) -> np.ndarray:
-        """Get pre-computed transition matrix for given age."""
+    def get_matrix(self, age: int, risk_class: int = 0) -> np.ndarray:
+        """
+        Get pre-computed transition matrix for given age and risk class.
+        
+        Args:
+            age: Current age
+            risk_class: Risk class index (0 to n_risk_classes-1)
+        """
         age = max(0, min(age, self.max_age))
-        return self.transition_matrices[age]
+        risk_class = max(0, min(risk_class, self.n_risk_classes - 1))
+        return self.transition_matrices[age, risk_class]
     
-    def print_matrix(self, age: int):
+    def print_matrix(self, age: int, risk_class: int = 0):
         """Print transition matrix for debugging."""
-        T = self.get_matrix(age)
+        T = self.get_matrix(age, risk_class)
         states = ['Healthy', 'Early', 'Advanced', 'Undetected', 'Detected', 'Dead']
         
-        print(f"\n=== Transition Matrix at Age {age} ===")
+        print(f"\n=== Transition Matrix at Age {age}, Risk Class {risk_class} ===")
+        print(f"    (Risk Multiplier: {self.risk_multipliers[risk_class]:.4f})")
         print("       " + "  ".join(f"{s:>10}" for s in states))
         for i, row_name in enumerate(states):
             row_str = "  ".join(f"{T[i,j]:10.4f}" for j in range(6))
             print(f"{row_name:>8} {row_str}")
         print(f"Row sums: {[f'{T[i].sum():.4f}' for i in range(6)]}")
+    
+    def print_risk_class_summary(self):
+        """Print summary of risk classes."""
+        print(f"\n=== Risk Class Summary (n={self.n_risk_classes}) ===")
+        for i in range(self.n_risk_classes):
+            print(f"  Class {i}: Multiplier = {self.risk_multipliers[i]:.4f}, "
+                  f"Prob = {self.risk_class_probs[i]:.4f}")
 
 
 class TrueDPOptimizer:
@@ -521,12 +594,20 @@ class TrueDPOptimizer:
     - OVERALL_COSTS: 전체 비용 최소화
     - QALY: Quality-Adjusted Life Years 최대화
     - PARETO: 다중 목적 Pareto 최적해
+    
+    State Space includes:
+    - age: Current age
+    - history: Years since last screening (0 = just screened, max_history = never or 10+ years)
+    - state: Health state (0-5)
+    - risk_class: Individual polyp risk class (0 to n_risk_classes-1)
+    - screens_used: Number of screenings used (optional, if max_screens > 0)
     """
     
     def __init__(self, settings_file: str, objective_type: ObjectiveType = ObjectiveType.QALY, 
-                 min_interval: int = 1, max_screens: int = 0):
+                 min_interval: int = 1, max_screens: int = 0, n_risk_classes: int = 5):
         self.params = SimulationParameters(settings_file)
-        self.trans_calc = TransitionMatrixCalculator(self.params)
+        self.n_risk_classes = n_risk_classes
+        self.trans_calc = TransitionMatrixCalculator(self.params, n_risk_classes=n_risk_classes)
         self.objective_type = objective_type
         
         # DP parameters
@@ -537,16 +618,23 @@ class TrueDPOptimizer:
         self.min_screen_interval = min_interval  # 최소 검진 간격 (년)
         self.max_screens = max_screens  # 총 검진 횟수 제한 (0 = 무제한)
         
-        # Value & Policy tables
+        # Risk class information from transition calculator
+        self.risk_multipliers = self.trans_calc.risk_multipliers
+        self.risk_class_probs = self.trans_calc.risk_class_probs
+        
+        # Value & Policy tables with risk_class dimension
         if self.max_screens > 0:
-            # 4D: V[age, history, state, screens_used]
-            # Policy[age, history, screens_used] = optimal action
-            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6, self.max_screens + 1))
-            self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1, self.max_screens + 1), dtype=int)
+            # 5D: V[age, history, state, risk_class, screens_used]
+            # Policy[age, history, risk_class, screens_used] = optimal action
+            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6, 
+                               self.n_risk_classes, self.max_screens + 1))
+            self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1, 
+                                    self.n_risk_classes, self.max_screens + 1), dtype=int)
         else:
-            # 3D: 무제한 검진
-            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6))
-            self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1), dtype=int)
+            # 4D: V[age, history, state, risk_class]
+            # Policy[age, history, risk_class] = optimal action
+            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6, self.n_risk_classes))
+            self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1, self.n_risk_classes), dtype=int)
         
         # For Pareto optimization: multiple value tables
         self.V_pareto = {}  # {objective_type: V_table}
@@ -646,11 +734,15 @@ class TrueDPOptimizer:
         print("\n" + "=" * 60)
         print("  TRUE DYNAMIC PROGRAMMING OPTIMIZER")
         print(f"  Objective: {self.objective_type.name}")
+        print(f"  Risk Classes: {self.n_risk_classes}")
         if self.max_screens > 0:
             print(f"  Max Screenings: {self.max_screens}")
         print(f"  Min Interval: {self.min_screen_interval} years")
         print("  Method: Backward Induction with Analytical Transition Matrix")
         print("=" * 60)
+        
+        # Print risk class summary
+        self.trans_calc.print_risk_class_summary()
         
         print(f"\n>>> Starting Backward Induction ({self.objective_type.name})...")
         
@@ -701,7 +793,7 @@ class TrueDPOptimizer:
             return base_reward * self.val_life_year
     
     def _solve_single_objective(self):
-        """단일 목적 함수에 대한 DP 해결"""
+        """단일 목적 함수에 대한 DP 해결 (risk class 차원 포함)"""
         gamma = 1.0 / (1 + self.discount_rate) if self.discount_rate > 0 else 1.0
         
         # QALY 모드에서는 WTP_THRESHOLD 사용
@@ -711,182 +803,84 @@ class TrueDPOptimizer:
             value_scale = self.val_life_year
         
         # Backward induction: from terminal age to min age
+        # Now includes risk_class dimension
         for t in range(self.terminal_age - 1, self.min_age - 1, -1):
-            T = self.trans_calc.get_matrix(t)
-            
-            for h in range(self.max_history + 1):
-                next_h_wait = min(h + 1, self.max_history)
-                next_h_screen = 0
-                
-                # === Compute V(t, h, s) for each state ===
-                
-                # --- Action 0: WAIT ---
-                ev_wait = np.zeros(6)
-                for s in range(6):
-                    # Expected future value from next states
-                    expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns] for ns in range(6))
-                    
-                    # Immediate reward (objective-specific)
-                    immediate = self._get_immediate_reward(s, t, action=0)
-                    
-                    ev_wait[s] = immediate + gamma * expected_future
-                
-                # --- Action 1: SCREEN ---
-                ev_screen = np.zeros(6)
-                
-                # 건강 상태(0)에서의 미래 가치 (모든 상태에서 참조)
-                future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns] for ns in range(6))
-                
-                # S=0 (Healthy): 검진 비용만 발생, 직접적인 이득 없음
-                immediate_0 = self._get_immediate_reward(0, t, action=1)
-                ev_screen[0] = immediate_0 - self.cost_colo + gamma * future_healthy
-                
-                # S=1 (Early Polyp): 발견하면 제거 → 건강 상태로 전환
-                # 용종 제거의 핵심 가치: 건강 상태 미래 - 용종 상태 미래
-                future_polyp = sum(T[1, ns] * self.V[t+1, next_h_screen, ns] for ns in range(6))
-                
-                # 용종 제거로 얻는 미래 QALY 이득 (핵심!)
-                cure_benefit = gamma * (future_healthy - future_polyp)
-                
-                # 발견 시 가치 = 건강 상태 보상 + 미래 건강 가치
-                v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
-                # 미발견 시 가치 = 용종 상태 보상 + 미래 용종 가치 (자연 경과)
-                v_missed = self._get_immediate_reward(1, t, action=1) + gamma * future_polyp
-                
-                ev_screen[1] = -self.cost_colo - self.cost_colo_polyp + (
-                    self.sens_early * v_cured + (1 - self.sens_early) * v_missed
-                )
-                
-                # S=2 (Advanced Polyp): 발견 → 제거 → 건강 상태
-                future_adv = sum(T[2, ns] * self.V[t+1, next_h_screen, ns] for ns in range(6))
-                v_cured_adv = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
-                v_missed_adv = self._get_immediate_reward(2, t, action=1) + gamma * future_adv
-                
-                ev_screen[2] = -self.cost_colo - self.cost_colo_polyp + (
-                    self.sens_adv * v_cured_adv + (1 - self.sens_adv) * v_missed_adv
-                )
-                
-                # S=3 (Undetected Cancer): 조기 발견 → 치료 상태로 전환
-                future_undetected = sum(T[3, ns] * self.V[t+1, next_h_screen, ns] for ns in range(6))
-                future_detected = sum(T[4, ns] * self.V[t+1, next_h_screen, ns] for ns in range(6))
-                
-                # 조기 발견의 이점: 발견된 암은 미발견 암보다 더 나은 예후
-                # 발견된 암 상태(4)의 전이 확률이 더 좋음 (사망률 낮음)
-                v_detected = self._get_immediate_reward(4, t, action=1) + gamma * future_detected
-                v_missed_ca = self._get_immediate_reward(3, t, action=1) + gamma * future_undetected
-                
-                ev_screen[3] = -self.cost_colo - self.cost_cancer_init + (
-                    self.sens_cancer * v_detected + (1 - self.sens_cancer) * v_missed_ca
-                )
-                
-                # S=4, 5: 이미 발견/사망 상태, 검진 의미 없음
-                ev_screen[4] = ev_wait[4]
-                ev_screen[5] = ev_wait[5]
-                
-                # --- Optimal Action Selection ---
-                prior = self._get_state_prior(t)
-                
-                # Weighted expected value for states 0-3 (actionable states)
-                denom = sum(prior[s] for s in range(4))
-                if denom > 0:
-                    E_wait = sum(prior[s] / denom * ev_wait[s] for s in range(4))
-                    E_screen = sum(prior[s] / denom * ev_screen[s] for s in range(4))
-                else:
-                    E_wait = ev_wait[0]
-                    E_screen = ev_screen[0]
-                
-                # 최소 검진 간격 제약: history < min_screen_interval 이면 검진 불가
-                if h < self.min_screen_interval:
-                    # 최근에 검진했으므로 반드시 Wait
-                    self.Policy[t, h] = 0
-                    for s in range(6):
-                        self.V[t, h, s] = ev_wait[s]
-                elif E_screen > E_wait:
-                    self.Policy[t, h] = 1
-                    for s in range(6):
-                        self.V[t, h, s] = ev_screen[s]
-                else:
-                    self.Policy[t, h] = 0
-                    for s in range(6):
-                        self.V[t, h, s] = ev_wait[s]
-                
-                # Debug output for key ages
-                if h == 10 and t in [50, 60, 70]:
-                    diff = E_screen - E_wait
-                    print(f"[Age {t}] Wait: {E_wait:,.0f} vs Screen: {E_screen:,.0f} | Diff: {diff:,.0f}")
-    
-    def _solve_with_screen_limit(self):
-        """총 검진 횟수 제한이 있는 경우의 DP 해결 (4D 상태 공간)"""
-        gamma = 1.0 / (1 + self.discount_rate) if self.discount_rate > 0 else 1.0
-        
-        print(f"  (Screen limit: {self.max_screens})")
-        
-        # Backward induction with screen count dimension
-        # V[age, history, state, screens_used] where screens_used = 0..max_screens
-        
-        for t in range(self.terminal_age - 1, self.min_age - 1, -1):
-            T = self.trans_calc.get_matrix(t)
-            
-            for n in range(self.max_screens + 1):  # screens_used so far
-                screens_remaining = self.max_screens - n
+            for r in range(self.n_risk_classes):  # Risk class loop
+                T = self.trans_calc.get_matrix(t, risk_class=r)  # Risk-class specific transition
                 
                 for h in range(self.max_history + 1):
                     next_h_wait = min(h + 1, self.max_history)
                     next_h_screen = 0
                     
+                    # === Compute V(t, h, s, r) for each state ===
+                    
                     # --- Action 0: WAIT ---
                     ev_wait = np.zeros(6)
                     for s in range(6):
-                        expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns, n] for ns in range(6))
+                        # Expected future value from next states (same risk class)
+                        expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns, r] for ns in range(6))
+                        
+                        # Immediate reward (objective-specific)
                         immediate = self._get_immediate_reward(s, t, action=0)
+                        
                         ev_wait[s] = immediate + gamma * expected_future
                     
-                    # --- Action 1: SCREEN (if allowed) ---
+                    # --- Action 1: SCREEN ---
                     ev_screen = np.zeros(6)
-                    can_screen = (screens_remaining > 0) and (h >= self.min_screen_interval)
                     
-                    if can_screen:
-                        n_after_screen = n + 1  # screens_used after screening
-                        
-                        # 건강 상태(0)에서의 미래 가치
-                        future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
-                        
-                        # S=0
-                        immediate_0 = self._get_immediate_reward(0, t, action=1)
-                        ev_screen[0] = immediate_0 - self.cost_colo + gamma * future_healthy
-                        
-                        # S=1 (Early Polyp)
-                        future_polyp = sum(T[1, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
-                        v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
-                        v_missed = self._get_immediate_reward(1, t, action=1) + gamma * future_polyp
-                        ev_screen[1] = -self.cost_colo - self.cost_colo_polyp + (
-                            self.sens_early * v_cured + (1 - self.sens_early) * v_missed
-                        )
-                        
-                        # S=2 (Advanced Polyp)
-                        future_adv = sum(T[2, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
-                        v_cured_adv = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
-                        v_missed_adv = self._get_immediate_reward(2, t, action=1) + gamma * future_adv
-                        ev_screen[2] = -self.cost_colo - self.cost_colo_polyp + (
-                            self.sens_adv * v_cured_adv + (1 - self.sens_adv) * v_missed_adv
-                        )
-                        
-                        # S=3 (Undetected Cancer)
-                        future_undetected = sum(T[3, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
-                        future_detected = sum(T[4, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
-                        v_detected = self._get_immediate_reward(4, t, action=1) + gamma * future_detected
-                        v_missed_ca = self._get_immediate_reward(3, t, action=1) + gamma * future_undetected
-                        ev_screen[3] = -self.cost_colo - self.cost_cancer_init + (
-                            self.sens_cancer * v_detected + (1 - self.sens_cancer) * v_missed_ca
-                        )
-                        
-                        ev_screen[4] = ev_wait[4]
-                        ev_screen[5] = ev_wait[5]
-                    else:
-                        ev_screen = ev_wait.copy()  # Can't screen, same as wait
+                    # 건강 상태(0)에서의 미래 가치 (모든 상태에서 참조)
+                    future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
+                    
+                    # S=0 (Healthy): 검진 비용만 발생, 직접적인 이득 없음
+                    immediate_0 = self._get_immediate_reward(0, t, action=1)
+                    ev_screen[0] = immediate_0 - self.cost_colo + gamma * future_healthy
+                    
+                    # S=1 (Early Polyp): 발견하면 제거 → 건강 상태로 전환
+                    # 용종 제거의 핵심 가치: 건강 상태 미래 - 용종 상태 미래
+                    future_polyp = sum(T[1, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
+                    
+                    # 용종 제거로 얻는 미래 QALY 이득 (핵심!)
+                    cure_benefit = gamma * (future_healthy - future_polyp)
+                    
+                    # 발견 시 가치 = 건강 상태 보상 + 미래 건강 가치
+                    v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
+                    # 미발견 시 가치 = 용종 상태 보상 + 미래 용종 가치 (자연 경과)
+                    v_missed = self._get_immediate_reward(1, t, action=1) + gamma * future_polyp
+                    
+                    ev_screen[1] = -self.cost_colo - self.cost_colo_polyp + (
+                        self.sens_early * v_cured + (1 - self.sens_early) * v_missed
+                    )
+                    
+                    # S=2 (Advanced Polyp): 발견 → 제거 → 건강 상태
+                    future_adv = sum(T[2, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
+                    v_cured_adv = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
+                    v_missed_adv = self._get_immediate_reward(2, t, action=1) + gamma * future_adv
+                    
+                    ev_screen[2] = -self.cost_colo - self.cost_colo_polyp + (
+                        self.sens_adv * v_cured_adv + (1 - self.sens_adv) * v_missed_adv
+                    )
+                    
+                    # S=3 (Undetected Cancer): 조기 발견 → 치료 상태로 전환
+                    future_undetected = sum(T[3, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
+                    future_detected = sum(T[4, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
+                    
+                    # 조기 발견의 이점: 발견된 암은 미발견 암보다 더 나은 예후
+                    # 발견된 암 상태(4)의 전이 확률이 더 좋음 (사망률 낮음)
+                    v_detected = self._get_immediate_reward(4, t, action=1) + gamma * future_detected
+                    v_missed_ca = self._get_immediate_reward(3, t, action=1) + gamma * future_undetected
+                    
+                    ev_screen[3] = -self.cost_colo - self.cost_cancer_init + (
+                        self.sens_cancer * v_detected + (1 - self.sens_cancer) * v_missed_ca
+                    )
+                    
+                    # S=4, 5: 이미 발견/사망 상태, 검진 의미 없음
+                    ev_screen[4] = ev_wait[4]
+                    ev_screen[5] = ev_wait[5]
                     
                     # --- Optimal Action Selection ---
                     prior = self._get_state_prior(t)
+                    
+                    # Weighted expected value for states 0-3 (actionable states)
                     denom = sum(prior[s] for s in range(4))
                     if denom > 0:
                         E_wait = sum(prior[s] / denom * ev_wait[s] for s in range(4))
@@ -895,24 +889,125 @@ class TrueDPOptimizer:
                         E_wait = ev_wait[0]
                         E_screen = ev_screen[0]
                     
-                    # Choose optimal action
-                    if can_screen and E_screen > E_wait:
-                        self.Policy[t, h, n] = 1
+                    # 최소 검진 간격 제약: history < min_screen_interval 이면 검진 불가
+                    if h < self.min_screen_interval:
+                        # 최근에 검진했으므로 반드시 Wait
+                        self.Policy[t, h, r] = 0
                         for s in range(6):
-                            self.V[t, h, s, n] = ev_screen[s]
+                            self.V[t, h, s, r] = ev_wait[s]
+                    elif E_screen > E_wait:
+                        self.Policy[t, h, r] = 1
+                        for s in range(6):
+                            self.V[t, h, s, r] = ev_screen[s]
                     else:
-                        self.Policy[t, h, n] = 0
+                        self.Policy[t, h, r] = 0
                         for s in range(6):
-                            self.V[t, h, s, n] = ev_wait[s]
+                            self.V[t, h, s, r] = ev_wait[s]
                     
-                    # Debug
-                    if h == 10 and n == 0 and t in [50, 60, 70]:
-                        diff = E_screen - E_wait if can_screen else 0
-                        print(f"[Age {t}, screens=0] Wait: {E_wait:,.0f} vs Screen: {E_screen:,.0f} | Diff: {diff:,.0f}")
+                    # Debug output for key ages (only for risk class 0 and middle class)
+                    if h == 10 and t in [50, 60, 70] and r in [0, self.n_risk_classes // 2, self.n_risk_classes - 1]:
+                        diff = E_screen - E_wait
+                        print(f"[Age {t}, Risk={r}] Wait: {E_wait:,.0f} vs Screen: {E_screen:,.0f} | Diff: {diff:,.0f}")
+    
+    def _solve_with_screen_limit(self):
+        """총 검진 횟수 제한이 있는 경우의 DP 해결 (5D 상태 공간 - risk class 포함)"""
+        gamma = 1.0 / (1 + self.discount_rate) if self.discount_rate > 0 else 1.0
+        
+        print(f"  (Screen limit: {self.max_screens}, Risk classes: {self.n_risk_classes})")
+        
+        # Backward induction with screen count and risk class dimensions
+        # V[age, history, state, risk_class, screens_used]
+        
+        for t in range(self.terminal_age - 1, self.min_age - 1, -1):
+            for r in range(self.n_risk_classes):  # Risk class loop
+                T = self.trans_calc.get_matrix(t, risk_class=r)
+                
+                for n in range(self.max_screens + 1):  # screens_used so far
+                    screens_remaining = self.max_screens - n
+                    
+                    for h in range(self.max_history + 1):
+                        next_h_wait = min(h + 1, self.max_history)
+                        next_h_screen = 0
+                        
+                        # --- Action 0: WAIT ---
+                        ev_wait = np.zeros(6)
+                        for s in range(6):
+                            expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns, r, n] for ns in range(6))
+                            immediate = self._get_immediate_reward(s, t, action=0)
+                            ev_wait[s] = immediate + gamma * expected_future
+                        
+                        # --- Action 1: SCREEN (if allowed) ---
+                        ev_screen = np.zeros(6)
+                        can_screen = (screens_remaining > 0) and (h >= self.min_screen_interval)
+                        
+                        if can_screen:
+                            n_after_screen = n + 1  # screens_used after screening
+                            
+                            # 건강 상태(0)에서의 미래 가치
+                            future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
+                            
+                            # S=0
+                            immediate_0 = self._get_immediate_reward(0, t, action=1)
+                            ev_screen[0] = immediate_0 - self.cost_colo + gamma * future_healthy
+                            
+                            # S=1 (Early Polyp)
+                            future_polyp = sum(T[1, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
+                            v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
+                            v_missed = self._get_immediate_reward(1, t, action=1) + gamma * future_polyp
+                            ev_screen[1] = -self.cost_colo - self.cost_colo_polyp + (
+                                self.sens_early * v_cured + (1 - self.sens_early) * v_missed
+                            )
+                            
+                            # S=2 (Advanced Polyp)
+                            future_adv = sum(T[2, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
+                            v_cured_adv = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
+                            v_missed_adv = self._get_immediate_reward(2, t, action=1) + gamma * future_adv
+                            ev_screen[2] = -self.cost_colo - self.cost_colo_polyp + (
+                                self.sens_adv * v_cured_adv + (1 - self.sens_adv) * v_missed_adv
+                            )
+                            
+                            # S=3 (Undetected Cancer)
+                            future_undetected = sum(T[3, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
+                            future_detected = sum(T[4, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
+                            v_detected = self._get_immediate_reward(4, t, action=1) + gamma * future_detected
+                            v_missed_ca = self._get_immediate_reward(3, t, action=1) + gamma * future_undetected
+                            ev_screen[3] = -self.cost_colo - self.cost_cancer_init + (
+                                self.sens_cancer * v_detected + (1 - self.sens_cancer) * v_missed_ca
+                            )
+                            
+                            ev_screen[4] = ev_wait[4]
+                            ev_screen[5] = ev_wait[5]
+                        else:
+                            ev_screen = ev_wait.copy()  # Can't screen, same as wait
+                        
+                        # --- Optimal Action Selection ---
+                        prior = self._get_state_prior(t)
+                        denom = sum(prior[s] for s in range(4))
+                        if denom > 0:
+                            E_wait = sum(prior[s] / denom * ev_wait[s] for s in range(4))
+                            E_screen = sum(prior[s] / denom * ev_screen[s] for s in range(4))
+                        else:
+                            E_wait = ev_wait[0]
+                            E_screen = ev_screen[0]
+                        
+                        # Choose optimal action
+                        if can_screen and E_screen > E_wait:
+                            self.Policy[t, h, r, n] = 1
+                            for s in range(6):
+                                self.V[t, h, s, r, n] = ev_screen[s]
+                        else:
+                            self.Policy[t, h, r, n] = 0
+                            for s in range(6):
+                                self.V[t, h, s, r, n] = ev_wait[s]
+                        
+                        # Debug (only for first risk class and n=0)
+                        if h == 10 and n == 0 and t in [50, 60, 70] and r in [0, self.n_risk_classes - 1]:
+                            diff = E_screen - E_wait if can_screen else 0
+                            print(f"[Age {t}, Risk={r}, screens=0] Wait: {E_wait:,.0f} vs Screen: {E_screen:,.0f} | Diff: {diff:,.0f}")
     
     def _solve_pareto(self):
         """
-        Pareto 최적화: 여러 목적 함수의 가중합
+        Pareto 최적화: 여러 목적 함수의 가중합 (risk class 포함)
         
         각 하위 목적 함수에 대해 개별적으로 풀고,
         가중합을 사용하여 최종 정책 결정
@@ -945,8 +1040,8 @@ class TrueDPOptimizer:
             sub_values[obj_type] = self.V.copy()
             sub_policies[obj_type] = self.Policy.copy()
             
-            # 초기화
-            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6))
+            # 초기화 (with risk class dimension)
+            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6, self.n_risk_classes))
             
             # 원래 목적 함수 복원
             self.objective_type = original_type
@@ -955,31 +1050,32 @@ class TrueDPOptimizer:
         print(">>> Combining sub-objectives with weights...")
         
         for t in range(self.min_age, self.terminal_age):
-            for h in range(self.max_history + 1):
-                # 각 목적 함수의 정책 투표
-                votes_screen = 0.0
-                votes_wait = 0.0
-                
-                for obj_type in sub_objectives:
-                    weight = self.pareto_weights[obj_type]
-                    if sub_policies[obj_type][t, h] == 1:
-                        votes_screen += weight
+            for r in range(self.n_risk_classes):
+                for h in range(self.max_history + 1):
+                    # 각 목적 함수의 정책 투표
+                    votes_screen = 0.0
+                    votes_wait = 0.0
+                    
+                    for obj_type in sub_objectives:
+                        weight = self.pareto_weights[obj_type]
+                        if sub_policies[obj_type][t, h, r] == 1:
+                            votes_screen += weight
+                        else:
+                            votes_wait += weight
+                    
+                    # 다수결 (가중)
+                    if votes_screen > votes_wait:
+                        self.Policy[t, h, r] = 1
                     else:
-                        votes_wait += weight
-                
-                # 다수결 (가중)
-                if votes_screen > votes_wait:
-                    self.Policy[t, h] = 1
-                else:
-                    self.Policy[t, h] = 0
-                
-                # 가중 평균 가치 함수
-                for s in range(6):
-                    weighted_value = sum(
-                        self.pareto_weights[obj_type] * sub_values[obj_type][t, h, s]
-                        for obj_type in sub_objectives
-                    )
-                    self.V[t, h, s] = weighted_value
+                        self.Policy[t, h, r] = 0
+                    
+                    # 가중 평균 가치 함수
+                    for s in range(6):
+                        weighted_value = sum(
+                            self.pareto_weights[obj_type] * sub_values[obj_type][t, h, s, r]
+                            for obj_type in sub_objectives
+                        )
+                        self.V[t, h, s, r] = weighted_value
         
         print(">>> Pareto Optimization Complete!")
         
@@ -1007,61 +1103,67 @@ class TrueDPOptimizer:
         return prior / prior.sum()
     
     def print_optimal_policy(self):
-        """Print the optimal screening policy."""
-        print("\n" + "=" * 60)
+        """Print the optimal screening policy (with risk class support)."""
+        print("\n" + "=" * 70)
         print(f"   OPTIMAL SCREENING POLICY")
         print(f"   Objective: {self.objective_type.name}")
+        print(f"   Risk Classes: {self.n_risk_classes}")
         if self.max_screens > 0:
             print(f"   Max Screenings: {self.max_screens}")
-        print("=" * 60)
+        print("=" * 70)
+        
+        # Print risk class summary
+        print("\n Risk Multipliers by Class:")
+        for r in range(self.n_risk_classes):
+            print(f"   Class {r}: {self.risk_multipliers[r]:.4f}")
         
         if self.max_screens > 0:
-            # 4D policy: show policy starting with 0 screens used
-            print(" Age | Years Since Last Screen | Screens Used | Recommendation")
-            print("-----|-------------------------|--------------|----------------")
-            for t in range(40, 81):
-                action = self.Policy[t, 10, 0]  # 10+ years, 0 screens used
-                action_str = "★ SCREEN" if action == 1 else "Wait"
-                print(f" {t:3d} |        10+ years        |      0       | {action_str}")
+            # 5D policy: show policy for each risk class starting with 0 screens used
+            print("\n" + "-" * 70)
+            print(" Policy by Risk Class (h=10+, screens_used=0):")
+            print(" Age |" + "".join(f" R{r} " for r in range(self.n_risk_classes)))
+            print("-----|" + "----" * self.n_risk_classes)
+            for t in range(40, 81, 5):
+                row = "|".join(" S " if self.Policy[t, 10, r, 0] == 1 else " . " 
+                               for r in range(self.n_risk_classes))
+                print(f" {t:3d} |{row}")
+        else:
+            # 4D policy: show policy for each risk class
+            print("\n" + "-" * 70)
+            print(" Policy by Risk Class (h=10+ years since last screening):")
+            print(" Age |" + "".join(f" R{r} " for r in range(self.n_risk_classes)))
+            print("-----|" + "----" * self.n_risk_classes)
+            for t in range(40, 81, 5):
+                row = "|".join(" S " if self.Policy[t, 10, r] == 1 else " . " 
+                               for r in range(self.n_risk_classes))
+                print(f" {t:3d} |{row}")
             
-            print("\n" + "-" * 60)
-            print(" Policy Matrix (screens_used=0, rows=ages, cols=history):")
+            # Detailed matrix for middle risk class
+            mid_r = self.n_risk_classes // 2
+            print(f"\n Policy Matrix (Risk Class {mid_r}, rows=ages, cols=history):")
             print("    " + "".join(f"{h:2d}" for h in range(11)))
             for t in range(40, 81, 5):
-                row = "".join("S " if self.Policy[t, h, 0] == 1 else ". " for h in range(11))
+                row = "".join("S " if self.Policy[t, h, mid_r] == 1 else ". " for h in range(11))
                 print(f"{t:2d}  {row}")
-        else:
-            # 3D policy (original)
-            print(" Age | Years Since Last Screen | Recommendation")
-            print("-----|-------------------------|----------------")
-            for t in range(40, 81):
-                action = self.Policy[t, 10]
-                action_str = "★ SCREEN" if action == 1 else "Wait"
-                print(f" {t:3d} |        10+ years        | {action_str}")
+        
+        print(" (S=Screen, .=Wait, R0=Low risk, R{high}=High risk)".format(high=self.n_risk_classes-1))
+        
+        # 검진 권고 요약 출력 (각 risk class별)
+        print("\n Summary by Risk Class:")
+        for r in range(self.n_risk_classes):
+            if self.max_screens > 0:
+                screen_ages = [t for t in range(40, 81) if self.Policy[t, 10, r, 0] == 1]
+            else:
+                screen_ages = [t for t in range(40, 81) if self.Policy[t, 10, r] == 1]
             
-            print("\n" + "-" * 60)
-            print(" Full Policy Matrix (rows=ages 40-80, cols=history 0-10):")
-            print("    " + "".join(f"{h:2d}" for h in range(11)))
-            for t in range(40, 81, 5):
-                row = "".join("S " if self.Policy[t, h] == 1 else ". " for h in range(11))
-                print(f"{t:2d}  {row}")
-        
-        print(" (S=Screen, .=Wait)")
-        
-        # 검진 권고 요약 출력
-        if self.max_screens > 0:
-            screen_ages = [t for t in range(40, 81) if self.Policy[t, 10, 0] == 1]
-        else:
-            screen_ages = [t for t in range(40, 81) if self.Policy[t, 10] == 1]
-        
-        if screen_ages:
-            print(f"\n Summary: Screen recommended at ages {min(screen_ages)}-{max(screen_ages)} (when 10+ yrs since last)")
-        else:
-            print("\n Summary: No screening recommended")
+            if screen_ages:
+                print(f"   Risk {r} (mult={self.risk_multipliers[r]:.2f}): Screen at ages {min(screen_ages)}-{max(screen_ages)}")
+            else:
+                print(f"   Risk {r} (mult={self.risk_multipliers[r]:.2f}): No screening recommended")
     
     def save_policy(self, output_dir: str = "policy"):
         """
-        정책을 파일로 저장
+        정책을 파일로 저장 (with risk class support)
         
         Args:
             output_dir: 출력 디렉토리 (기본값: 'policy')
@@ -1080,6 +1182,7 @@ class TrueDPOptimizer:
         if self.max_screens > 0:
             base_name += f"_max{self.max_screens}"
         base_name += f"_int{self.min_screen_interval}"
+        base_name += f"_risk{self.n_risk_classes}"
         
         # NPY 파일로 저장 (전체 배열)
         npy_path = os.path.join(output_dir, f"{base_name}_{timestamp}.npy")
@@ -1090,22 +1193,32 @@ class TrueDPOptimizer:
         csv_path = os.path.join(output_dir, f"{base_name}_{timestamp}.csv")
         with open(csv_path, 'w') as f:
             if self.max_screens > 0:
-                # 4D: 모든 screens_used 값 포함
-                f.write("age,history,screens_used,action\n")
+                # 5D: 모든 risk_class와 screens_used 값 포함
+                f.write("age,history,risk_class,screens_used,action\n")
                 for t in range(40, 81):  # 40-80세
                     for h in range(self.max_history + 1):
-                        for n in range(self.max_screens + 1):
-                            action = self.Policy[t, h, n]
-                            f.write(f"{t},{h},{n},{action}\n")
+                        for r in range(self.n_risk_classes):
+                            for n in range(self.max_screens + 1):
+                                action = self.Policy[t, h, r, n]
+                                f.write(f"{t},{h},{r},{n},{action}\n")
             else:
-                # 3D
-                f.write("age,history,action\n")
+                # 4D: risk_class 포함
+                f.write("age,history,risk_class,action\n")
                 for t in range(40, 81):  # 40-80세
                     for h in range(self.max_history + 1):
-                        action = self.Policy[t, h]
-                        f.write(f"{t},{h},{action}\n")
+                        for r in range(self.n_risk_classes):
+                            action = self.Policy[t, h, r]
+                            f.write(f"{t},{h},{r},{action}\n")
         
         print(f">>> Policy CSV saved: {csv_path}")
+        
+        # Risk multipliers 저장
+        risk_path = os.path.join(output_dir, f"{base_name}_{timestamp}_risk_classes.csv")
+        with open(risk_path, 'w') as f:
+            f.write("risk_class,multiplier,probability\n")
+            for r in range(self.n_risk_classes):
+                f.write(f"{r},{self.risk_multipliers[r]:.6f},{self.risk_class_probs[r]:.6f}\n")
+        print(f">>> Risk classes saved: {risk_path}")
         
         # 요약 정보 저장
         info_path = os.path.join(output_dir, f"{base_name}_{timestamp}_info.txt")
@@ -1113,18 +1226,19 @@ class TrueDPOptimizer:
             f.write(f"Objective: {self.objective_type.name}\n")
             f.write(f"Min Interval: {self.min_screen_interval} years\n")
             f.write(f"Max Screens: {self.max_screens if self.max_screens > 0 else 'Unlimited'}\n")
+            f.write(f"Risk Classes: {self.n_risk_classes}\n")
             f.write(f"Age Range: {self.min_age}-{self.max_age}\n")
             f.write(f"Max History: {self.max_history}\n")
             f.write(f"Generated: {datetime.now().isoformat()}\n")
             
-            # 요약
-            if self.max_screens > 0:
-                screen_ages = [t for t in range(40, 81) if self.Policy[t, 10, 0] == 1]
-            else:
-                screen_ages = [t for t in range(40, 81) if self.Policy[t, 10] == 1]
-            
-            if screen_ages:
-                f.write(f"\nScreen ages (h=10, n=0): {screen_ages}\n")
+            # 요약 (각 risk class별)
+            f.write("\nScreen ages by risk class (h=10, n=0):\n")
+            for r in range(self.n_risk_classes):
+                if self.max_screens > 0:
+                    screen_ages = [t for t in range(40, 81) if self.Policy[t, 10, r, 0] == 1]
+                else:
+                    screen_ages = [t for t in range(40, 81) if self.Policy[t, 10, r] == 1]
+                f.write(f"  Risk {r} (mult={self.risk_multipliers[r]:.4f}): {screen_ages}\n")
         
         print(f">>> Policy info saved: {info_path}")
         
@@ -1173,6 +1287,13 @@ def main():
         help='총 검진 횟수 제한. 0=무제한 (default: 0)'
     )
     
+    parser.add_argument(
+        '--risk-classes', '-r',
+        type=int,
+        default=2,
+        help='개인별 용종 위험도 클래스 수 (default: 2). 값이 클수록 개인 변이 세분화'
+    )
+    
     args = parser.parse_args()
     
     # Map integer to ObjectiveType enum
@@ -1187,17 +1308,19 @@ def main():
     
     objective_type = objective_map[args.objective]
     
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
     print("  COLORECTAL CANCER SCREENING OPTIMIZATION")
     print("  True Dynamic Programming with Known Transition Probabilities")
     print(f"  Objective: {objective_type.name}")
     print(f"  Min Interval: {args.interval} years")
+    print(f"  Risk Classes: {args.risk_classes}")
     if args.max_screens > 0:
         print(f"  Max Screenings: {args.max_screens}")
-    print("=" * 60)
+    print("=" * 70)
     
     dp = TrueDPOptimizer(args.settings, objective_type=objective_type, 
-                         min_interval=args.interval, max_screens=args.max_screens)
+                         min_interval=args.interval, max_screens=args.max_screens,
+                         n_risk_classes=args.risk_classes)
     dp.solve()
     dp.print_optimal_policy()
     dp.save_policy()
