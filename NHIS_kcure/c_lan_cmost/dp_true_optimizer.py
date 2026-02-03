@@ -523,7 +523,8 @@ class TrueDPOptimizer:
     - PARETO: 다중 목적 Pareto 최적해
     """
     
-    def __init__(self, settings_file: str, objective_type: ObjectiveType = ObjectiveType.QALY):
+    def __init__(self, settings_file: str, objective_type: ObjectiveType = ObjectiveType.QALY, 
+                 min_interval: int = 1, max_screens: int = 0):
         self.params = SimulationParameters(settings_file)
         self.trans_calc = TransitionMatrixCalculator(self.params)
         self.objective_type = objective_type
@@ -533,13 +534,19 @@ class TrueDPOptimizer:
         self.max_age = self.params.opt_max_age
         self.terminal_age = 100
         self.max_history = 10  # Max years since last screening
-        self.min_screen_interval = 3  # 최소 검진 간격 (년) - history < 이 값이면 검진 불가
+        self.min_screen_interval = min_interval  # 최소 검진 간격 (년)
+        self.max_screens = max_screens  # 총 검진 횟수 제한 (0 = 무제한)
         
         # Value & Policy tables
-        # V[age, history, state] = expected future value
-        # Policy[age, history] = optimal action (0=wait, 1=screen)
-        self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6))
-        self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1), dtype=int)
+        if self.max_screens > 0:
+            # 4D: V[age, history, state, screens_used]
+            # Policy[age, history, screens_used] = optimal action
+            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6, self.max_screens + 1))
+            self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1, self.max_screens + 1), dtype=int)
+        else:
+            # 3D: 무제한 검진
+            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6))
+            self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1), dtype=int)
         
         # For Pareto optimization: multiple value tables
         self.V_pareto = {}  # {objective_type: V_table}
@@ -639,17 +646,18 @@ class TrueDPOptimizer:
         print("\n" + "=" * 60)
         print("  TRUE DYNAMIC PROGRAMMING OPTIMIZER")
         print(f"  Objective: {self.objective_type.name}")
+        if self.max_screens > 0:
+            print(f"  Max Screenings: {self.max_screens}")
+        print(f"  Min Interval: {self.min_screen_interval} years")
         print("  Method: Backward Induction with Analytical Transition Matrix")
         print("=" * 60)
-        
-        # Skip transition matrix printing for cleaner output
-        # for age in [40, 50, 60, 70]:
-        #     self.trans_calc.print_matrix(age)
         
         print(f"\n>>> Starting Backward Induction ({self.objective_type.name})...")
         
         if self.objective_type == ObjectiveType.PARETO:
             self._solve_pareto()
+        elif self.max_screens > 0:
+            self._solve_with_screen_limit()
         else:
             self._solve_single_objective()
         
@@ -807,6 +815,101 @@ class TrueDPOptimizer:
                     diff = E_screen - E_wait
                     print(f"[Age {t}] Wait: {E_wait:,.0f} vs Screen: {E_screen:,.0f} | Diff: {diff:,.0f}")
     
+    def _solve_with_screen_limit(self):
+        """총 검진 횟수 제한이 있는 경우의 DP 해결 (4D 상태 공간)"""
+        gamma = 1.0 / (1 + self.discount_rate) if self.discount_rate > 0 else 1.0
+        
+        print(f"  (Screen limit: {self.max_screens})")
+        
+        # Backward induction with screen count dimension
+        # V[age, history, state, screens_used] where screens_used = 0..max_screens
+        
+        for t in range(self.terminal_age - 1, self.min_age - 1, -1):
+            T = self.trans_calc.get_matrix(t)
+            
+            for n in range(self.max_screens + 1):  # screens_used so far
+                screens_remaining = self.max_screens - n
+                
+                for h in range(self.max_history + 1):
+                    next_h_wait = min(h + 1, self.max_history)
+                    next_h_screen = 0
+                    
+                    # --- Action 0: WAIT ---
+                    ev_wait = np.zeros(6)
+                    for s in range(6):
+                        expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns, n] for ns in range(6))
+                        immediate = self._get_immediate_reward(s, t, action=0)
+                        ev_wait[s] = immediate + gamma * expected_future
+                    
+                    # --- Action 1: SCREEN (if allowed) ---
+                    ev_screen = np.zeros(6)
+                    can_screen = (screens_remaining > 0) and (h >= self.min_screen_interval)
+                    
+                    if can_screen:
+                        n_after_screen = n + 1  # screens_used after screening
+                        
+                        # 건강 상태(0)에서의 미래 가치
+                        future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
+                        
+                        # S=0
+                        immediate_0 = self._get_immediate_reward(0, t, action=1)
+                        ev_screen[0] = immediate_0 - self.cost_colo + gamma * future_healthy
+                        
+                        # S=1 (Early Polyp)
+                        future_polyp = sum(T[1, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
+                        v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
+                        v_missed = self._get_immediate_reward(1, t, action=1) + gamma * future_polyp
+                        ev_screen[1] = -self.cost_colo - self.cost_colo_polyp + (
+                            self.sens_early * v_cured + (1 - self.sens_early) * v_missed
+                        )
+                        
+                        # S=2 (Advanced Polyp)
+                        future_adv = sum(T[2, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
+                        v_cured_adv = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
+                        v_missed_adv = self._get_immediate_reward(2, t, action=1) + gamma * future_adv
+                        ev_screen[2] = -self.cost_colo - self.cost_colo_polyp + (
+                            self.sens_adv * v_cured_adv + (1 - self.sens_adv) * v_missed_adv
+                        )
+                        
+                        # S=3 (Undetected Cancer)
+                        future_undetected = sum(T[3, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
+                        future_detected = sum(T[4, ns] * self.V[t+1, next_h_screen, ns, n_after_screen] for ns in range(6))
+                        v_detected = self._get_immediate_reward(4, t, action=1) + gamma * future_detected
+                        v_missed_ca = self._get_immediate_reward(3, t, action=1) + gamma * future_undetected
+                        ev_screen[3] = -self.cost_colo - self.cost_cancer_init + (
+                            self.sens_cancer * v_detected + (1 - self.sens_cancer) * v_missed_ca
+                        )
+                        
+                        ev_screen[4] = ev_wait[4]
+                        ev_screen[5] = ev_wait[5]
+                    else:
+                        ev_screen = ev_wait.copy()  # Can't screen, same as wait
+                    
+                    # --- Optimal Action Selection ---
+                    prior = self._get_state_prior(t)
+                    denom = sum(prior[s] for s in range(4))
+                    if denom > 0:
+                        E_wait = sum(prior[s] / denom * ev_wait[s] for s in range(4))
+                        E_screen = sum(prior[s] / denom * ev_screen[s] for s in range(4))
+                    else:
+                        E_wait = ev_wait[0]
+                        E_screen = ev_screen[0]
+                    
+                    # Choose optimal action
+                    if can_screen and E_screen > E_wait:
+                        self.Policy[t, h, n] = 1
+                        for s in range(6):
+                            self.V[t, h, s, n] = ev_screen[s]
+                    else:
+                        self.Policy[t, h, n] = 0
+                        for s in range(6):
+                            self.V[t, h, s, n] = ev_wait[s]
+                    
+                    # Debug
+                    if h == 10 and n == 0 and t in [50, 60, 70]:
+                        diff = E_screen - E_wait if can_screen else 0
+                        print(f"[Age {t}, screens=0] Wait: {E_wait:,.0f} vs Screen: {E_screen:,.0f} | Diff: {diff:,.0f}")
+    
     def _solve_pareto(self):
         """
         Pareto 최적화: 여러 목적 함수의 가중합
@@ -908,30 +1011,124 @@ class TrueDPOptimizer:
         print("\n" + "=" * 60)
         print(f"   OPTIMAL SCREENING POLICY")
         print(f"   Objective: {self.objective_type.name}")
+        if self.max_screens > 0:
+            print(f"   Max Screenings: {self.max_screens}")
         print("=" * 60)
-        print(" Age | Years Since Last Screen | Recommendation")
-        print("-----|-------------------------|----------------")
         
-        # Print policy for 10+ years since last screening (most conservative)
-        for t in range(40, 81):
-            action = self.Policy[t, 10]
-            action_str = "★ SCREEN" if action == 1 else "Wait"
-            print(f" {t:3d} |        10+ years        | {action_str}")
+        if self.max_screens > 0:
+            # 4D policy: show policy starting with 0 screens used
+            print(" Age | Years Since Last Screen | Screens Used | Recommendation")
+            print("-----|-------------------------|--------------|----------------")
+            for t in range(40, 81):
+                action = self.Policy[t, 10, 0]  # 10+ years, 0 screens used
+                action_str = "★ SCREEN" if action == 1 else "Wait"
+                print(f" {t:3d} |        10+ years        |      0       | {action_str}")
+            
+            print("\n" + "-" * 60)
+            print(" Policy Matrix (screens_used=0, rows=ages, cols=history):")
+            print("    " + "".join(f"{h:2d}" for h in range(11)))
+            for t in range(40, 81, 5):
+                row = "".join("S " if self.Policy[t, h, 0] == 1 else ". " for h in range(11))
+                print(f"{t:2d}  {row}")
+        else:
+            # 3D policy (original)
+            print(" Age | Years Since Last Screen | Recommendation")
+            print("-----|-------------------------|----------------")
+            for t in range(40, 81):
+                action = self.Policy[t, 10]
+                action_str = "★ SCREEN" if action == 1 else "Wait"
+                print(f" {t:3d} |        10+ years        | {action_str}")
+            
+            print("\n" + "-" * 60)
+            print(" Full Policy Matrix (rows=ages 40-80, cols=history 0-10):")
+            print("    " + "".join(f"{h:2d}" for h in range(11)))
+            for t in range(40, 81, 5):
+                row = "".join("S " if self.Policy[t, h] == 1 else ". " for h in range(11))
+                print(f"{t:2d}  {row}")
         
-        print("\n" + "-" * 60)
-        print(" Full Policy Matrix (rows=ages 40-80, cols=history 0-10):")
-        print("    " + "".join(f"{h:2d}" for h in range(11)))
-        for t in range(40, 81, 5):
-            row = "".join("S " if self.Policy[t, h] == 1 else ". " for h in range(11))
-            print(f"{t:2d}  {row}")
         print(" (S=Screen, .=Wait)")
         
         # 검진 권고 요약 출력
-        screen_ages = [t for t in range(40, 81) if self.Policy[t, 10] == 1]
+        if self.max_screens > 0:
+            screen_ages = [t for t in range(40, 81) if self.Policy[t, 10, 0] == 1]
+        else:
+            screen_ages = [t for t in range(40, 81) if self.Policy[t, 10] == 1]
+        
         if screen_ages:
             print(f"\n Summary: Screen recommended at ages {min(screen_ages)}-{max(screen_ages)} (when 10+ yrs since last)")
         else:
             print("\n Summary: No screening recommended")
+    
+    def save_policy(self, output_dir: str = "policy"):
+        """
+        정책을 파일로 저장
+        
+        Args:
+            output_dir: 출력 디렉토리 (기본값: 'policy')
+        """
+        import os
+        from datetime import datetime
+        
+        # 디렉토리 생성
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # 타임스탬프
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 파일명 생성
+        base_name = f"{self.objective_type.name}"
+        if self.max_screens > 0:
+            base_name += f"_max{self.max_screens}"
+        base_name += f"_int{self.min_screen_interval}"
+        
+        # NPY 파일로 저장 (전체 배열)
+        npy_path = os.path.join(output_dir, f"{base_name}_{timestamp}.npy")
+        np.save(npy_path, self.Policy)
+        print(f"\n>>> Policy saved: {npy_path}")
+        
+        # CSV 파일로 저장 (읽기 쉬운 형식)
+        csv_path = os.path.join(output_dir, f"{base_name}_{timestamp}.csv")
+        with open(csv_path, 'w') as f:
+            if self.max_screens > 0:
+                # 4D: screens_used=0인 경우만 CSV로
+                f.write("age,history,screens_used,action\n")
+                for t in range(self.min_age, self.max_age + 1):
+                    for h in range(self.max_history + 1):
+                        for n in range(self.max_screens + 1):
+                            action = self.Policy[t, h, n]
+                            f.write(f"{t},{h},{n},{action}\n")
+            else:
+                # 3D
+                f.write("age,history,action\n")
+                for t in range(self.min_age, self.max_age + 1):
+                    for h in range(self.max_history + 1):
+                        action = self.Policy[t, h]
+                        f.write(f"{t},{h},{action}\n")
+        
+        print(f">>> Policy CSV saved: {csv_path}")
+        
+        # 요약 정보 저장
+        info_path = os.path.join(output_dir, f"{base_name}_{timestamp}_info.txt")
+        with open(info_path, 'w', encoding='utf-8') as f:
+            f.write(f"Objective: {self.objective_type.name}\n")
+            f.write(f"Min Interval: {self.min_screen_interval} years\n")
+            f.write(f"Max Screens: {self.max_screens if self.max_screens > 0 else 'Unlimited'}\n")
+            f.write(f"Age Range: {self.min_age}-{self.max_age}\n")
+            f.write(f"Max History: {self.max_history}\n")
+            f.write(f"Generated: {datetime.now().isoformat()}\n")
+            
+            # 요약
+            if self.max_screens > 0:
+                screen_ages = [t for t in range(40, 81) if self.Policy[t, 10, 0] == 1]
+            else:
+                screen_ages = [t for t in range(40, 81) if self.Policy[t, 10] == 1]
+            
+            if screen_ages:
+                f.write(f"\nScreen ages (h=10, n=0): {screen_ages}\n")
+        
+        print(f">>> Policy info saved: {info_path}")
+        
+        return npy_path, csv_path, info_path
 
 
 def main():
@@ -962,6 +1159,20 @@ def main():
         help='Path to settings.ini file (default: settings.ini)'
     )
     
+    parser.add_argument(
+        '--interval', '-i',
+        type=int,
+        default=3,
+        help='최소 검진 간격 (년). 검진 후 이 기간 동안 검진 불가 (default: 3)'
+    )
+    
+    parser.add_argument(
+        '--max-screens', '-m',
+        type=int,
+        default=0,
+        help='총 검진 횟수 제한. 0=무제한 (default: 0)'
+    )
+    
     args = parser.parse_args()
     
     # Map integer to ObjectiveType enum
@@ -980,11 +1191,16 @@ def main():
     print("  COLORECTAL CANCER SCREENING OPTIMIZATION")
     print("  True Dynamic Programming with Known Transition Probabilities")
     print(f"  Objective: {objective_type.name}")
+    print(f"  Min Interval: {args.interval} years")
+    if args.max_screens > 0:
+        print(f"  Max Screenings: {args.max_screens}")
     print("=" * 60)
     
-    dp = TrueDPOptimizer(args.settings, objective_type=objective_type)
+    dp = TrueDPOptimizer(args.settings, objective_type=objective_type, 
+                         min_interval=args.interval, max_screens=args.max_screens)
     dp.solve()
     dp.print_optimal_policy()
+    dp.save_policy()
     
     return dp
 
