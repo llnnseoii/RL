@@ -27,3 +27,6 @@ runs/
 # Outputs
 output/
 results/
+
+*.tfevents.*
+NHIS_kcure/c_lan_cmost/logs/
