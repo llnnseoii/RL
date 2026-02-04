@@ -73,14 +73,21 @@ class QALYCalculator:
         80: 0.75, 85: 0.70, 90: 0.65, 95: 0.60, 100: 0.55
     }
     
-    # 암 병기별 유틸리티 감소량
+    # 상태별 유틸리티 감소량 (12개 상태)
+    # 0=Healthy, 1-6=Polyp stages, 7-10=Cancer I-IV, 11=Dead
     CANCER_DECREMENTS = {
-        0: 0.00,   # 건강
-        1: 0.05,   # 조기 용종
-        2: 0.08,   # 진행성 용종
-        3: 0.25,   # 미발견 암
-        4: 0.35,   # 발견된 암 (치료 중)
-        5: 0.00    # 사망 (QALY=0)
+        0: 0.00,   # Healthy
+        1: 0.01,   # Polyp Stage 1
+        2: 0.02,   # Polyp Stage 2
+        3: 0.03,   # Polyp Stage 3
+        4: 0.04,   # Polyp Stage 4
+        5: 0.05,   # Polyp Stage 5 (Advanced)
+        6: 0.07,   # Polyp Stage 6 (Advanced)
+        7: 0.15,   # Cancer Stage I
+        8: 0.22,   # Cancer Stage II
+        9: 0.32,   # Cancer Stage III
+        10: 0.45,  # Cancer Stage IV
+        11: 0.00   # Dead (QALY=0)
     }
     
     # 암 병기별 치료 비용 가중치
@@ -101,13 +108,13 @@ class QALYCalculator:
         
         Args:
             age: 나이
-            state: 건강 상태 (0=건강, 1=조기용종, 2=진행용종, 3=미발견암, 4=발견암, 5=사망)
+            state: 건강 상태 (0=Healthy, 1-6=Polyp, 7-10=Cancer, 11=Dead)
             gender: 성별 (0=남성, 1=여성)
         
         Returns:
             유틸리티 값 (0.0 ~ 1.0)
         """
-        if state == 5:  # 사망
+        if state == 11:  # 사망
             return 0.0
         
         # 나이별 기본 유틸리티 (선형 보간)
@@ -177,10 +184,26 @@ class TransitionMatrixCalculator:
     similar to how entities.py uses individual_polyp_risk.
     """
     
-    def __init__(self, params: SimulationParameters, n_risk_classes: int = 5):
+    # State indices for 12-state model
+    # Polyp stages 1-6, Cancer stages I-IV (undetected)
+    STATE_HEALTHY = 0
+    STATE_POLYP_1 = 1
+    STATE_POLYP_2 = 2
+    STATE_POLYP_3 = 3
+    STATE_POLYP_4 = 4
+    STATE_POLYP_5 = 5  # Advanced
+    STATE_POLYP_6 = 6  # Advanced
+    STATE_CANCER_I = 7
+    STATE_CANCER_II = 8
+    STATE_CANCER_III = 9
+    STATE_CANCER_IV = 10
+    STATE_DEAD = 11
+    
+    def __init__(self, params: SimulationParameters, n_risk_classes: int = 5, min_age: int = 40, max_age: int = 80):
         self.params = params
-        self.n_states = 6
-        self.max_age = 100
+        self.n_states = 12  # Healthy + Polyp(1-6) + Cancer(I-IV) + Dead
+        self.min_age = min_age  # 계산 범위 시작 나이
+        self.max_age = max_age
         self.n_risk_classes = n_risk_classes
         
         # Compute risk multipliers from individual_polyp_risk distribution
@@ -226,7 +249,7 @@ class TransitionMatrixCalculator:
     
     def _compute_all_matrices(self):
         """Pre-compute transition matrices for all ages and risk classes."""
-        for age in range(self.max_age + 1):
+        for age in range(self.min_age, self.max_age + 1):
             for risk_class in range(self.n_risk_classes):
                 self.transition_matrices[age, risk_class] = self._compute_matrix_for_age(
                     age, risk_class)
@@ -240,8 +263,8 @@ class TransitionMatrixCalculator:
         if age_idx < 0:
             return 0.0
         
-        p_death_male = self.params.life_table_males[age_idx] if age_idx < len(self.params.life_table_males) else 0.3
-        p_death_female = self.params.life_table_females[age_idx] if age_idx < len(self.params.life_table_females) else 0.3
+        p_death_male = self.params.life_table_males[age_idx] if age_idx < len(self.params.life_table_males) else 0.0
+        p_death_female = self.params.life_table_females[age_idx] if age_idx < len(self.params.life_table_females) else 0.0
         
         return (1 - p_female) * p_death_male + p_female * p_death_female
     
@@ -276,94 +299,65 @@ class TransitionMatrixCalculator:
         
         return min(p_annual, 1.0)
     
-    def _get_polyp_progression(self, age: int) -> tuple:
+    def _get_polyp_progression_by_stage(self, age: int, stage: int) -> float:
         """
-        Get polyp progression probabilities.
+        Get polyp progression probability for a specific stage.
+        
+        Args:
+            age: Current age
+            stage: Polyp stage (1-6)
         
         Returns:
-            (p_early_to_advanced, p_advanced_to_cancer)
+            Probability of progressing to next stage (or cancer for stage 6)
         """
-        # Early polyp stages: 1-4
-        # Advanced polyp stages: 5-6 (adv_polyp_transition = 5)
+        if age < 0 or stage < 1 or stage > 6:
+            return 0.0
         
-        if age < 0:
-            return 0.0, 0.0
-        
-        # Get age index for progression rates
         age_idx = min(age, 99)
+        stage_idx = stage - 1  # 0-indexed
         
-        # Early polyp progression (Stages 1-4 -> 5)
-        # We use average of stages 1-4 progression rates
-        early_probs = []
-        for stage in range(1, 5):  # Stages 1-4
-            if stage - 1 < len(self.params.polyp_progression_rates):
-                rates = self.params.polyp_progression_rates[stage - 1]
-                if age_idx < len(rates):
-                    early_probs.append(rates[age_idx])
+        if stage_idx < len(self.params.polyp_progression_rates):
+            rates = self.params.polyp_progression_rates[stage_idx]
+            if age_idx < len(rates):
+                return rates[age_idx]
         
-        # Combine progression through multiple stages (approximate)
-        # Use average rate as representative
-        p_early_prog = np.mean(early_probs) if early_probs else 0.0
-        
-        # Advanced polyp progression (Stages 5-6 -> Cancer)
-        adv_probs = []
-        for stage in range(5, 7):  # Stages 5-6
-            if stage - 1 < len(self.params.polyp_progression_rates):
-                rates = self.params.polyp_progression_rates[stage - 1]
-                if age_idx < len(rates):
-                    adv_probs.append(rates[age_idx])
-        
-        p_adv_prog = np.mean(adv_probs) if adv_probs else 0.0
-        
-        return p_early_prog, p_adv_prog
+        return 0.0
     
-    def _get_fast_cancer_rate(self) -> tuple:
+    def _get_fast_cancer_rate_by_stage(self, stage: int) -> float:
         """
-        Get fast cancer rates (cancer development without full polyp progression).
+        Get fast cancer rate for a specific polyp stage.
+        
+        Args:
+            stage: Polyp stage (1-6)
         
         Returns:
-            (p_fast_early, p_fast_advanced) - probability of jumping to cancer
+            Probability of fast cancer development
         """
-        # FastCancerRates correspond to each polyp stage
-        # Early stages (1-4) 
-        early_fast = []
-        for i in range(4):
-            if i < len(self.params.fast_cancer_rates):
-                early_fast.append(self.params.fast_cancer_rates[i])
+        if stage < 1 or stage > 6:
+            return 0.0
         
-        # Advanced stages (5-6)
-        adv_fast = []
-        for i in range(4, 6):
-            if i < len(self.params.fast_cancer_rates):
-                adv_fast.append(self.params.fast_cancer_rates[i])
-        
-        p_fast_early = np.mean(early_fast) if early_fast else 0.0
-        p_fast_adv = np.mean(adv_fast) if adv_fast else 0.0
-        
-        return p_fast_early, p_fast_adv
+        stage_idx = stage - 1
+        if stage_idx < len(self.params.fast_cancer_rates):
+            return self.params.fast_cancer_rates[stage_idx]
+        return 0.0
     
-    def _get_healing_rate(self) -> tuple:
+    def _get_healing_rate_by_stage(self, stage: int) -> float:
         """
-        Get polyp healing (regression) rates.
+        Get healing (regression) rate for a specific polyp stage.
+        
+        Args:
+            stage: Polyp stage (1-6)
         
         Returns:
-            (p_heal_early, p_heal_advanced)
+            Probability of regressing to previous stage
         """
-        # Healing rates by stage
-        early_heal = []
-        for i in range(4):
-            if i < len(self.params.healing_rates):
-                early_heal.append(self.params.healing_rates[i])
+        if stage < 1 or stage > 6:
+            return 0.0
         
-        adv_heal = []
-        for i in range(4, 6):
-            if i < len(self.params.healing_rates):
-                adv_heal.append(self.params.healing_rates[i])
-        
-        p_heal_early = np.mean(early_heal) if early_heal else 0.0
-        p_heal_adv = np.mean(adv_heal) if adv_heal else 0.0
-        
-        return p_heal_early, p_heal_adv
+        stage_idx = stage - 1
+        if stage_idx < len(self.params.healing_rates):
+            return self.params.healing_rates[stage_idx]
+        return 0.0
     
     def _get_direct_cancer_rate(self, age: int) -> float:
         """Get direct cancer development rate (no polyp precursor)."""
@@ -382,24 +376,46 @@ class TransitionMatrixCalculator:
         
         return base_rate * self.params.direct_cancer_speed
     
-    def _get_cancer_symptom_rate(self) -> float:
+    def _get_cancer_symptom_rate(self, age: int = 60) -> float:
         """
         Get rate of cancer becoming symptomatic (undetected -> detected).
-        Based on sojourn time CDFs.
+        Uses stage-weighted sojourn time CDFs based on age-specific stage distribution.
+        
+        Args:
+            age: Current age (for stage distribution lookup)
+        
+        Returns:
+            Probability of symptoms appearing in 1 year
         """
-        # Average sojourn time across stages
-        # Use 1-year transition probability
-        avg_symptom_prob = 0.0
-        count = 0
+        # Get age-specific stage distribution (like entities.py _determine_symptoms_stage)
+        age_idx = min(int(age / 5), len(self.params.frac_stage1) - 1) if hasattr(self.params, 'frac_stage1') else 0
         
-        for stage_cdf in self.params.sojourn_cdf:
-            if len(stage_cdf) > 0:
-                # CDF gives P(symptoms by year t)
-                # P(symptoms in year 1) = CDF[0] (first entry is for 1 year)
-                avg_symptom_prob += stage_cdf[0] if len(stage_cdf) > 0 else 0.0
-                count += 1
+        if age_idx >= 0 and hasattr(self.params, 'frac_stage1'):
+            p1 = self.params.frac_stage1[age_idx] if age_idx < len(self.params.frac_stage1) else 0.25
+            p2 = self.params.frac_stage2[age_idx] if age_idx < len(self.params.frac_stage2) else 0.25
+            p3 = self.params.frac_stage3[age_idx] if age_idx < len(self.params.frac_stage3) else 0.25
+            p4 = self.params.frac_stage4[age_idx] if age_idx < len(self.params.frac_stage4) else 0.25
+        else:
+            p1, p2, p3, p4 = 0.25, 0.25, 0.25, 0.25
         
-        return avg_symptom_prob / count if count > 0 else 0.1
+        total = p1 + p2 + p3 + p4
+        if total == 0:
+            return 0.1  # Default fallback
+        
+        # Normalize probabilities
+        weights = [p1 / total, p2 / total, p3 / total, p4 / total]
+        
+        # Weighted average of 1-year symptom probability from sojourn CDFs
+        weighted_symptom_prob = 0.0
+        
+        for stage_idx, weight in enumerate(weights):
+            if stage_idx < len(self.params.sojourn_cdf):
+                stage_cdf = self.params.sojourn_cdf[stage_idx]
+                if len(stage_cdf) > 0:
+                    # CDF[0] = P(symptoms by year 1)
+                    weighted_symptom_prob += weight * stage_cdf[0]
+        
+        return weighted_symptom_prob if weighted_symptom_prob > 0 else 0.1
     
     def _get_cancer_mortality(self, age: int) -> float:
         """
@@ -437,7 +453,13 @@ class TransitionMatrixCalculator:
     
     def _compute_matrix_for_age(self, age: int, risk_class: int = -1) -> np.ndarray:
         """
-        Compute the 6x6 transition matrix for a given age and risk class.
+        Compute the 12x12 transition matrix for a given age and risk class.
+        
+        States:
+            0: Healthy
+            1-6: Polyp stages 1-6
+            7-10: Cancer stages I-IV (undetected)
+            11: Dead
         
         Args:
             age: Current age
@@ -445,108 +467,143 @@ class TransitionMatrixCalculator:
         """
         T = np.zeros((self.n_states, self.n_states))
         
-        # Get all probabilities for this age and risk class
+        # Get common probabilities
         p_death_bg = self._get_background_mortality(age)
-        p_polyp = self._get_polyp_incidence(age, risk_class)  # Risk-class specific!
-        p_early_prog, p_adv_prog = self._get_polyp_progression(age)
-        p_fast_early, p_fast_adv = self._get_fast_cancer_rate()
-        p_heal_early, p_heal_adv = self._get_healing_rate()
+        p_polyp = self._get_polyp_incidence(age, risk_class)
         p_direct_cancer = self._get_direct_cancer_rate(age)
-        p_symptom = self._get_cancer_symptom_rate()
-        p_cancer_death = self._get_cancer_mortality(age)
         
-        # Ensure valid probabilities (0-1 range)
-        def clip(p): return max(0.0, min(1.0, p))
+        # Clip probabilities to valid range
+        def clip(p): 
+            return max(0.0, min(1.0, p))
         
         p_death_bg = clip(p_death_bg)
         p_polyp = clip(p_polyp)
         p_direct_cancer = clip(p_direct_cancer)
         
+        # Cancer stage distribution for direct cancer (based on frac_stage params)
+        cancer_stage_dist = self._get_cancer_stage_distribution(age)
+        
         # === State 0: Healthy ===
-        # Can: stay healthy, develop polyp, develop direct cancer, die
-        p_stay_healthy = 1 - p_polyp - p_direct_cancer - p_death_bg
-        p_stay_healthy = max(0.0, p_stay_healthy)
+        # Can: stay healthy, develop polyp (stage 1), develop direct cancer, die
+        p_stay_healthy = max(0.0, 1 - p_polyp - p_direct_cancer - p_death_bg)
         
-        T[0, 0] = p_stay_healthy  # Stay healthy
-        T[0, 1] = p_polyp         # Develop early polyp
-        T[0, 3] = p_direct_cancer # Direct cancer (skip polyp)
-        T[0, 5] = p_death_bg      # Background death
+        T[0, 0] = p_stay_healthy          # Stay healthy
+        T[0, 1] = p_polyp                  # Develop polyp stage 1
+        # Direct cancer - distribute across cancer stages I-IV
+        for cs in range(4):
+            T[0, 7 + cs] = p_direct_cancer * cancer_stage_dist[cs]
+        T[0, 11] = p_death_bg              # Background death
         
-        # Normalize row 0
-        total = T[0].sum()
-        if total > 1:
-            T[0] /= total
-        elif total < 1:
-            T[0, 0] += 1 - total  # Add remainder to stay healthy
+        self._normalize_row(T, 0)
         
-        # === State 1: Early Polyp ===
-        # Can: regress to healthy, stay early, progress to advanced, fast cancer, die
-        p_stay_early = 1 - p_heal_early - p_early_prog - p_fast_early - p_death_bg
-        p_stay_early = max(0.0, p_stay_early)
+        # === States 1-6: Polyp stages ===
+        for polyp_stage in range(1, 7):  # Polyp stages 1-6
+            state_idx = polyp_stage  # State index equals polyp stage
+            
+            p_prog = self._get_polyp_progression_by_stage(age, polyp_stage)
+            p_fast = self._get_fast_cancer_rate_by_stage(polyp_stage)
+            p_heal = self._get_healing_rate_by_stage(polyp_stage)
+            
+            p_prog = clip(p_prog)
+            p_fast = clip(p_fast)
+            p_heal = clip(p_heal)
+            
+            # Calculate stay probability
+            p_stay = max(0.0, 1 - p_prog - p_fast - p_heal - p_death_bg)
+            
+            T[state_idx, state_idx] = p_stay  # Stay in same stage
+            
+            # Healing: regress to previous stage (or healthy if stage 1)
+            if polyp_stage == 1:
+                T[state_idx, 0] = p_heal  # Regress to healthy
+            else:
+                T[state_idx, polyp_stage - 1] = p_heal  # Regress to previous stage
+            
+            # Progression
+            if polyp_stage < 6:
+                T[state_idx, polyp_stage + 1] = p_prog  # Progress to next polyp stage
+            else:
+                # Stage 6 progresses to cancer - distribute across stages
+                for cs in range(4):
+                    T[state_idx, 7 + cs] = p_prog * cancer_stage_dist[cs]
+            
+            # Fast cancer - distribute across cancer stages
+            for cs in range(4):
+                T[state_idx, 7 + cs] += p_fast * cancer_stage_dist[cs]
+            
+            T[state_idx, 11] = p_death_bg  # Background death
+            
+            self._normalize_row(T, state_idx)
         
-        T[1, 0] = p_heal_early    # Regress to healthy
-        T[1, 1] = p_stay_early    # Stay early
-        T[1, 2] = p_early_prog    # Progress to advanced
-        T[1, 3] = p_fast_early    # Fast cancer
-        T[1, 5] = p_death_bg      # Background death
+        # === States 7-10: Cancer stages I-IV (undetected) ===
+        for cancer_stage in range(1, 5):  # Cancer stages I-IV
+            state_idx = 6 + cancer_stage  # States 7, 8, 9, 10
+            
+            p_cancer_death = self._get_cancer_mortality_by_stage(age, cancer_stage)
+            p_cancer_death = clip(p_cancer_death)
+            
+            p_death_total = min(p_cancer_death + p_death_bg, 1.0)
+            p_stay = max(0.0, 1 - p_death_total)
+            
+            T[state_idx, state_idx] = p_stay  # Stay in cancer state
+            T[state_idx, 11] = p_death_total  # Die (cancer + background)
+            
+            self._normalize_row(T, state_idx)
         
-        total = T[1].sum()
-        if total > 1:
-            T[1] /= total
-        elif total < 1:
-            T[1, 1] += 1 - total
-        
-        # === State 2: Advanced Polyp ===
-        # Can: regress to early, stay advanced, progress to cancer, die
-        p_stay_adv = 1 - p_heal_adv - p_adv_prog - p_fast_adv - p_death_bg
-        p_stay_adv = max(0.0, p_stay_adv)
-        
-        T[2, 1] = p_heal_adv      # Regress to early polyp
-        T[2, 2] = p_stay_adv      # Stay advanced
-        T[2, 3] = p_adv_prog + p_fast_adv  # Progress to cancer
-        T[2, 5] = p_death_bg      # Background death
-        
-        total = T[2].sum()
-        if total > 1:
-            T[2] /= total
-        elif total < 1:
-            T[2, 2] += 1 - total
-        
-        # === State 3: Undetected Cancer ===
-        # Can: stay undetected, become symptomatic, die from cancer
-        p_cancer_death_total = min(p_cancer_death + p_death_bg, 1.0)
-        p_stay_undetected = 1 - p_symptom - p_cancer_death_total
-        p_stay_undetected = max(0.0, p_stay_undetected)
-        
-        T[3, 3] = p_stay_undetected     # Stay undetected
-        T[3, 4] = p_symptom             # Become symptomatic
-        T[3, 5] = p_cancer_death_total  # Die
-        
-        total = T[3].sum()
-        if total > 1:
-            T[3] /= total
-        elif total < 1:
-            T[3, 3] += 1 - total
-        
-        # === State 4: Detected Cancer ===
-        # Can: stay detected (in treatment), die
-        p_stay_detected = 1 - p_cancer_death_total
-        p_stay_detected = max(0.0, p_stay_detected)
-        
-        T[4, 4] = p_stay_detected       # Stay in treatment
-        T[4, 5] = p_cancer_death_total  # Die
-        
-        total = T[4].sum()
-        if total > 1:
-            T[4] /= total
-        elif total < 1:
-            T[4, 4] += 1 - total
-        
-        # === State 5: Dead ===
+        # === State 11: Dead ===
         # Absorbing state
-        T[5, 5] = 1.0
+        T[11, 11] = 1.0
         
         return T
+    
+    def _get_cancer_stage_distribution(self, age: int) -> list:
+        """Get probability distribution across cancer stages I-IV at given age."""
+        age_idx = min(int(age / 5), len(self.params.frac_stage1) - 1) if hasattr(self.params, 'frac_stage1') else 0
+        
+        if age_idx >= 0:
+            p1 = self.params.frac_stage1[age_idx] if hasattr(self.params, 'frac_stage1') and age_idx < len(self.params.frac_stage1) else 0.25
+            p2 = self.params.frac_stage2[age_idx] if hasattr(self.params, 'frac_stage2') and age_idx < len(self.params.frac_stage2) else 0.25
+            p3 = self.params.frac_stage3[age_idx] if hasattr(self.params, 'frac_stage3') and age_idx < len(self.params.frac_stage3) else 0.25
+            p4 = self.params.frac_stage4[age_idx] if hasattr(self.params, 'frac_stage4') and age_idx < len(self.params.frac_stage4) else 0.25
+        else:
+            p1, p2, p3, p4 = 0.25, 0.25, 0.25, 0.25
+        
+        total = p1 + p2 + p3 + p4
+        if total > 0:
+            return [p1/total, p2/total, p3/total, p4/total]
+        return [0.25, 0.25, 0.25, 0.25]
+    
+    def _get_cancer_mortality_by_stage(self, age: int, cancer_stage: int) -> float:
+        """Get cancer mortality rate for specific cancer stage (1-4)."""
+        if cancer_stage < 1 or cancer_stage > 4:
+            return 0.05
+        
+        age_group = 0
+        for i, threshold in enumerate(self.params.os_age_ranges):
+            if age >= threshold:
+                age_group = i + 1
+        age_group = min(age_group, self.params.n_age_groups - 1)
+        
+        stage_idx = cancer_stage - 1
+        idx = stage_idx * self.params.n_age_groups * self.params.num_data_points_per_surv_curve
+        idx += age_group * self.params.num_data_points_per_surv_curve
+        idx += 1  # 1-year survival
+        
+        if idx < len(self.params.os_by_gender_age_stage):
+            survival = self.params.os_by_gender_age_stage[idx]
+            return 1 - survival
+        
+        # Default mortality rates by stage if data not available
+        default_rates = {1: 0.05, 2: 0.10, 3: 0.20, 4: 0.40}
+        return default_rates.get(cancer_stage, 0.05)
+    
+    def _normalize_row(self, T: np.ndarray, row_idx: int):
+        """Normalize a row of transition matrix to sum to 1."""
+        total = T[row_idx].sum()
+        if total > 1:
+            T[row_idx] /= total
+        elif total < 1:
+            T[row_idx, row_idx] += 1 - total  # Add remainder to stay probability
     
     def get_matrix(self, age: int, risk_class: int = 0) -> np.ndarray:
         """
@@ -563,15 +620,16 @@ class TransitionMatrixCalculator:
     def print_matrix(self, age: int, risk_class: int = 0):
         """Print transition matrix for debugging."""
         T = self.get_matrix(age, risk_class)
-        states = ['Healthy', 'Early', 'Advanced', 'Undetected', 'Detected', 'Dead']
+        states = ['H', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'CI', 'CII', 'CIII', 'CIV', 'D']
         
         print(f"\n=== Transition Matrix at Age {age}, Risk Class {risk_class} ===")
         print(f"    (Risk Multiplier: {self.risk_multipliers[risk_class]:.4f})")
-        print("       " + "  ".join(f"{s:>10}" for s in states))
+        print(f"States: H=Healthy, P1-P6=Polyp stages, CI-CIV=Cancer stages, D=Dead")
+        print("      " + " ".join(f"{s:>6}" for s in states))
         for i, row_name in enumerate(states):
-            row_str = "  ".join(f"{T[i,j]:10.4f}" for j in range(6))
-            print(f"{row_name:>8} {row_str}")
-        print(f"Row sums: {[f'{T[i].sum():.4f}' for i in range(6)]}")
+            row_str = " ".join(f"{T[i,j]:6.3f}" for j in range(12))
+            print(f"{row_name:>5} {row_str}")
+        print(f"Row sums: {[f'{T[i].sum():.3f}' for i in range(12)]}")
     
     def print_risk_class_summary(self):
         """Print summary of risk classes."""
@@ -607,12 +665,14 @@ class TrueDPOptimizer:
                  min_interval: int = 1, max_screens: int = 0, n_risk_classes: int = 5):
         self.params = SimulationParameters(settings_file)
         self.n_risk_classes = n_risk_classes
-        self.trans_calc = TransitionMatrixCalculator(self.params, n_risk_classes=n_risk_classes)
-        self.objective_type = objective_type
         
-        # DP parameters
+        # DP parameters (먼저 설정 - TransitionMatrixCalculator에 필요)
         self.min_age = self.params.opt_min_age
         self.max_age = self.params.opt_max_age
+        
+        # min_age를 전달하여 계산 범위 제한
+        self.trans_calc = TransitionMatrixCalculator(self.params, n_risk_classes=n_risk_classes, min_age=self.min_age)
+        self.objective_type = objective_type
         self.terminal_age = 100
         self.max_history = 10  # Max years since last screening
         self.min_screen_interval = min_interval  # 최소 검진 간격 (년)
@@ -626,14 +686,14 @@ class TrueDPOptimizer:
         if self.max_screens > 0:
             # 5D: V[age, history, state, risk_class, screens_used]
             # Policy[age, history, risk_class, screens_used] = optimal action
-            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6, 
+            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 12, 
                                self.n_risk_classes, self.max_screens + 1))
             self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1, 
                                     self.n_risk_classes, self.max_screens + 1), dtype=int)
         else:
             # 4D: V[age, history, state, risk_class]
             # Policy[age, history, risk_class] = optimal action
-            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6, self.n_risk_classes))
+            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 12, self.n_risk_classes))
             self.Policy = np.zeros((self.terminal_age + 2, self.max_history + 1, self.n_risk_classes), dtype=int)
         
         # For Pareto optimization: multiple value tables
@@ -665,68 +725,76 @@ class TrueDPOptimizer:
     
     def _setup_objective_rewards(self):
         """
-        목적 함수별 보상 가중치 설정
+        목적 함수별 보상 가중치 설정 (12개 상태)
         """
         # 각 목적 함수별 상태별 즉시 보상/비용
-        # state: 0=Healthy, 1=Early, 2=Advanced, 3=Undetected, 4=Detected, 5=Dead
+        # States: 0=Healthy, 1-6=Polyp stages, 7-10=Cancer I-IV, 11=Dead
         
         if self.objective_type == ObjectiveType.CRC_INCIDENCE:
             # 암 발생 시 큰 페널티, 용종 발견 시 작은 보상
             self.state_rewards = {
-                0: 0.0,      # Healthy
-                1: -0.1,     # Early polyp (암 전구 병변)
-                2: -0.3,     # Advanced polyp (암 위험 증가)
-                3: -10.0,    # Undetected cancer (발생!)
-                4: -8.0,     # Detected cancer (이미 발생)
-                5: 0.0       # Dead
+                0: 0.0,       # Healthy
+                1: -0.05,     # Polyp Stage 1
+                2: -0.1,      # Polyp Stage 2
+                3: -0.15,     # Polyp Stage 3
+                4: -0.2,      # Polyp Stage 4
+                5: -0.3,      # Polyp Stage 5 (Advanced)
+                6: -0.5,      # Polyp Stage 6 (Advanced)
+                7: -10.0,     # Cancer Stage I
+                8: -10.0,     # Cancer Stage II
+                9: -10.0,     # Cancer Stage III
+                10: -10.0,    # Cancer Stage IV
+                11: 0.0       # Dead
             }
             self.screen_benefit = 5.0   # 용종 제거로 암 예방 보상
             
         elif self.objective_type == ObjectiveType.CRC_MORTALITY:
-            # 암 사망 시 큰 페널티
+            # 암 사망 시 큰 페널티 (병기별 차등)
             self.state_rewards = {
                 0: 0.0,
-                1: 0.0,
-                2: -0.1,
-                3: -5.0,     # Undetected cancer (사망 위험)
-                4: -3.0,     # Detected cancer (치료 중, 사망 위험 감소)
-                5: -50.0     # Death from cancer
+                1: 0.0, 2: 0.0, 3: 0.0, 4: -0.1, 5: -0.2, 6: -0.3,
+                7: -2.0,      # Cancer I (낮은 사망률)
+                8: -4.0,      # Cancer II
+                9: -8.0,      # Cancer III
+                10: -15.0,    # Cancer IV (높은 사망률)
+                11: -50.0     # Death
             }
-            self.screen_benefit = 10.0  # 조기 발견으로 사망 예방
+            self.screen_benefit = 10.0
             
         elif self.objective_type == ObjectiveType.LIFE_YEARS_LOST:
-            # 생존연수 기반 보상 (나이 고려)
+            # 생존연수 기반 보상
             self.state_rewards = {
-                0: 1.0,      # Healthy - 1 life year
-                1: 0.98,     # Early polyp - 약간 감소
-                2: 0.95,     # Advanced polyp
-                3: 0.7,      # Undetected cancer - 기대수명 감소
-                4: 0.6,      # Detected cancer - 치료 중
-                5: 0.0       # Dead - no life years
+                0: 1.0,       # Healthy - 1 life year
+                1: 0.99, 2: 0.98, 3: 0.97, 4: 0.96, 5: 0.94, 6: 0.92,
+                7: 0.85,      # Cancer I
+                8: 0.75,      # Cancer II
+                9: 0.55,      # Cancer III
+                10: 0.30,     # Cancer IV
+                11: 0.0       # Dead
             }
             self.screen_benefit = 2.0
             
         elif self.objective_type == ObjectiveType.OVERALL_COSTS:
-            # 비용 최소화 (음수로 표현)
+            # 비용 최소화 (병기별 치료비 반영)
             self.state_rewards = {
-                0: 0.0,                           # Healthy - no cost
-                1: 0.0,                           # Early polyp
-                2: 0.0,                           # Advanced polyp
-                3: -self.cost_cancer_init / 1000, # Cancer treatment cost
-                4: -self.cost_cancer_final / 1000,# Ongoing cancer cost
-                5: 0.0
+                0: 0.0,
+                1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0, 6: 0.0,
+                7: -self.cost_cancer_init * 1.0 / 1000,   # Stage I
+                8: -self.cost_cancer_init * 1.3 / 1000,   # Stage II
+                9: -self.cost_cancer_init * 1.6 / 1000,   # Stage III
+                10: -self.cost_cancer_init * 2.0 / 1000,  # Stage IV
+                11: 0.0
             }
-            self.screen_benefit = 0.0  # 비용 절감은 암 예방에서 발생
+            self.screen_benefit = 0.0
             
         elif self.objective_type == ObjectiveType.QALY:
             # QALY 기반 (상태별 유틸리티 × 생존연수)
-            # age-specific 유틸리티는 solve() 에서 적용
             self.state_rewards = None  # Use QALYCalculator dynamically
             self.screen_benefit = 0.5
             
         elif self.objective_type == ObjectiveType.PARETO:
             # Pareto: 여러 목적 함수의 가중합
-            self.state_rewards = None  # Will be calculated dynamically
+            self.state_rewards = None
             self.screen_benefit = 1.0
     
     def solve(self):
@@ -792,9 +860,47 @@ class TrueDPOptimizer:
             
             return base_reward * self.val_life_year
     
+    def _get_state_prior(self, age: int) -> dict:
+        """
+        나이별 상태 사전 확률 분포 반환 (12개 상태)
+        
+        Args:
+            age: 현재 나이
+        
+        Returns:
+            각 상태의 확률 딕셔너리
+        """
+        # 기본적으로 대부분 Healthy, 나이가 들수록 Polyp/Cancer 확률 증가
+        base_polyp_rate = min(0.001 * (age - 30), 0.05) if age > 30 else 0.0
+        base_cancer_rate = min(0.0001 * (age - 40), 0.005) if age > 40 else 0.0
+        
+        prior = {
+            0: 1.0,  # Will be normalized
+            1: base_polyp_rate * 0.3,
+            2: base_polyp_rate * 0.25,
+            3: base_polyp_rate * 0.2,
+            4: base_polyp_rate * 0.1,
+            5: base_polyp_rate * 0.1,
+            6: base_polyp_rate * 0.05,
+            7: base_cancer_rate * 0.4,
+            8: base_cancer_rate * 0.3,
+            9: base_cancer_rate * 0.2,
+            10: base_cancer_rate * 0.1,
+            11: 0.0  # Dead
+        }
+        
+        # Normalize
+        total = sum(prior.values())
+        if total > 0:
+            for s in prior:
+                prior[s] /= total
+        
+        return prior
+    
     def _solve_single_objective(self):
-        """단일 목적 함수에 대한 DP 해결 (risk class 차원 포함)"""
+        """단일 목적 함수에 대한 DP 해결 (12개 상태, risk class 차원 포함)"""
         gamma = 1.0 / (1 + self.discount_rate) if self.discount_rate > 0 else 1.0
+        n_states = 12  # Healthy + Polyp(1-6) + Cancer(I-IV) + Dead
         
         # QALY 모드에서는 WTP_THRESHOLD 사용
         if self.objective_type == ObjectiveType.QALY:
@@ -802,127 +908,125 @@ class TrueDPOptimizer:
         else:
             value_scale = self.val_life_year
         
-        # Backward induction: from terminal age to min age
-        # Now includes risk_class dimension
+        # Polyp stage별 검출률 (stages 1-6)
+        polyp_sens = [0.50, 0.60, 0.70, 0.80, 0.90, 0.95]
+        cancer_sens = 0.95  # 암 검출률
+        
+        # Backward induction
         for t in range(self.terminal_age - 1, self.min_age - 1, -1):
-            for r in range(self.n_risk_classes):  # Risk class loop
-                T = self.trans_calc.get_matrix(t, risk_class=r)  # Risk-class specific transition
+            for r in range(self.n_risk_classes):
+                T = self.trans_calc.get_matrix(t, risk_class=r)
                 
                 for h in range(self.max_history + 1):
                     next_h_wait = min(h + 1, self.max_history)
                     next_h_screen = 0
                     
-                    # === Compute V(t, h, s, r) for each state ===
-                    
-                    # --- Action 0: WAIT ---
-                    ev_wait = np.zeros(6)
-                    for s in range(6):
-                        # Expected future value from next states (same risk class)
-                        expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns, r] for ns in range(6))
-                        
-                        # Immediate reward (objective-specific)
+                    # === Action 0: WAIT ===
+                    ev_wait = np.zeros(n_states)
+                    for s in range(n_states):
+                        expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns, r] for ns in range(n_states))
                         immediate = self._get_immediate_reward(s, t, action=0)
-                        
                         ev_wait[s] = immediate + gamma * expected_future
                     
-                    # --- Action 1: SCREEN ---
-                    ev_screen = np.zeros(6)
+                    # === Action 1: SCREEN ===
+                    ev_screen = np.zeros(n_states)
                     
-                    # 건강 상태(0)에서의 미래 가치 (모든 상태에서 참조)
-                    future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
+                    # 건강 상태(0)에서의 미래 가치
+                    future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(n_states))
                     
-                    # S=0 (Healthy): 검진 비용만 발생, 직접적인 이득 없음
+                    # S=0 (Healthy): 검진 비용만 발생
                     immediate_0 = self._get_immediate_reward(0, t, action=1)
                     ev_screen[0] = immediate_0 - self.cost_colo + gamma * future_healthy
                     
-                    # S=1 (Early Polyp): 발견하면 제거 → 건강 상태로 전환
-                    # 용종 제거의 핵심 가치: 건강 상태 미래 - 용종 상태 미래
-                    future_polyp = sum(T[1, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
+                    # S=1-6 (Polyp Stages): 발견 시 제거 → Healthy로 전환
+                    for polyp_stage in range(1, 7):
+                        state_idx = polyp_stage
+                        sens = polyp_sens[polyp_stage - 1]
+                        
+                        future_polyp = sum(T[state_idx, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(n_states))
+                        
+                        # 발견 시: Healthy로 전환
+                        v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
+                        # 미발견 시: 현재 stage 유지
+                        v_missed = self._get_immediate_reward(state_idx, t, action=1) + gamma * future_polyp
+                        
+                        ev_screen[state_idx] = -self.cost_colo - self.cost_colo_polyp + (
+                            sens * v_cured + (1 - sens) * v_missed
+                        )
                     
-                    # 용종 제거로 얻는 미래 QALY 이득 (핵심!)
-                    cure_benefit = gamma * (future_healthy - future_polyp)
+                    # S=7-10 (Cancer I-IV): 발견 시 조기 치료 효과
+                    for cancer_stage in range(1, 5):
+                        state_idx = 6 + cancer_stage  # States 7, 8, 9, 10
+                        
+                        future_cancer = sum(T[state_idx, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(n_states))
+                        
+                        # 발견 시: 조기 치료로 사망률 감소 (same state but with treatment benefit)
+                        # 발견된 암의 미래 가치는 미발견 암보다 약간 나음
+                        treatment_bonus = value_scale * 0.1 * (5 - cancer_stage)  # 병기가 낮을수록 이득
+                        
+                        v_detected = self._get_immediate_reward(state_idx, t, action=1) + gamma * future_cancer + treatment_bonus
+                        v_missed = self._get_immediate_reward(state_idx, t, action=1) + gamma * future_cancer
+                        
+                        ev_screen[state_idx] = -self.cost_colo - self.cost_cancer_init + (
+                            cancer_sens * v_detected + (1 - cancer_sens) * v_missed
+                        )
                     
-                    # 발견 시 가치 = 건강 상태 보상 + 미래 건강 가치
-                    v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
-                    # 미발견 시 가치 = 용종 상태 보상 + 미래 용종 가치 (자연 경과)
-                    v_missed = self._get_immediate_reward(1, t, action=1) + gamma * future_polyp
-                    
-                    ev_screen[1] = -self.cost_colo - self.cost_colo_polyp + (
-                        self.sens_early * v_cured + (1 - self.sens_early) * v_missed
-                    )
-                    
-                    # S=2 (Advanced Polyp): 발견 → 제거 → 건강 상태
-                    future_adv = sum(T[2, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
-                    v_cured_adv = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
-                    v_missed_adv = self._get_immediate_reward(2, t, action=1) + gamma * future_adv
-                    
-                    ev_screen[2] = -self.cost_colo - self.cost_colo_polyp + (
-                        self.sens_adv * v_cured_adv + (1 - self.sens_adv) * v_missed_adv
-                    )
-                    
-                    # S=3 (Undetected Cancer): 조기 발견 → 치료 상태로 전환
-                    future_undetected = sum(T[3, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
-                    future_detected = sum(T[4, ns] * self.V[t+1, next_h_screen, ns, r] for ns in range(6))
-                    
-                    # 조기 발견의 이점: 발견된 암은 미발견 암보다 더 나은 예후
-                    # 발견된 암 상태(4)의 전이 확률이 더 좋음 (사망률 낮음)
-                    v_detected = self._get_immediate_reward(4, t, action=1) + gamma * future_detected
-                    v_missed_ca = self._get_immediate_reward(3, t, action=1) + gamma * future_undetected
-                    
-                    ev_screen[3] = -self.cost_colo - self.cost_cancer_init + (
-                        self.sens_cancer * v_detected + (1 - self.sens_cancer) * v_missed_ca
-                    )
-                    
-                    # S=4, 5: 이미 발견/사망 상태, 검진 의미 없음
-                    ev_screen[4] = ev_wait[4]
-                    ev_screen[5] = ev_wait[5]
+                    # S=11 (Dead): 검진 의미 없음
+                    ev_screen[11] = ev_wait[11]
                     
                     # --- Optimal Action Selection ---
                     prior = self._get_state_prior(t)
                     
-                    # Weighted expected value for states 0-3 (actionable states)
-                    denom = sum(prior[s] for s in range(4))
+                    # Polyp/Cancer 상태들에 대한 가중 기대값 (Dead 제외)
+                    actionable_states = list(range(11))  # 0-10
+                    denom = sum(prior.get(s, 0) for s in actionable_states)
                     if denom > 0:
-                        E_wait = sum(prior[s] / denom * ev_wait[s] for s in range(4))
-                        E_screen = sum(prior[s] / denom * ev_screen[s] for s in range(4))
+                        E_wait = sum(prior.get(s, 0) / denom * ev_wait[s] for s in actionable_states)
+                        E_screen = sum(prior.get(s, 0) / denom * ev_screen[s] for s in actionable_states)
                     else:
                         E_wait = ev_wait[0]
                         E_screen = ev_screen[0]
                     
-                    # 최소 검진 간격 제약: history < min_screen_interval 이면 검진 불가
+                    # 최소 검진 간격 제약
                     if h < self.min_screen_interval:
-                        # 최근에 검진했으므로 반드시 Wait
                         self.Policy[t, h, r] = 0
-                        for s in range(6):
+                        for s in range(n_states):
                             self.V[t, h, s, r] = ev_wait[s]
                     elif E_screen > E_wait:
                         self.Policy[t, h, r] = 1
-                        for s in range(6):
+                        for s in range(n_states):
                             self.V[t, h, s, r] = ev_screen[s]
                     else:
                         self.Policy[t, h, r] = 0
-                        for s in range(6):
+                        for s in range(n_states):
                             self.V[t, h, s, r] = ev_wait[s]
                     
-                    # Debug output for key ages (only for risk class 0 and middle class)
+                    # Debug output
                     if h == 10 and t in [50, 60, 70] and r in [0, self.n_risk_classes // 2, self.n_risk_classes - 1]:
                         diff = E_screen - E_wait
                         print(f"[Age {t}, Risk={r}] Wait: {E_wait:,.0f} vs Screen: {E_screen:,.0f} | Diff: {diff:,.0f}")
     
     def _solve_with_screen_limit(self):
-        """총 검진 횟수 제한이 있는 경우의 DP 해결 (5D 상태 공간 - risk class 포함)"""
+        """총 검진 횟수 제한이 있는 경우의 DP 해결 (12개 상태, risk class 포함)"""
         gamma = 1.0 / (1 + self.discount_rate) if self.discount_rate > 0 else 1.0
+        n_states = 12
         
         print(f"  (Screen limit: {self.max_screens}, Risk classes: {self.n_risk_classes})")
         
-        # Backward induction with screen count and risk class dimensions
-        # V[age, history, state, risk_class, screens_used]
+        # Polyp stage별 검출률
+        polyp_sens = [0.50, 0.60, 0.70, 0.80, 0.90, 0.95]
+        cancer_sens = 0.95
+        
+        if self.objective_type == ObjectiveType.QALY:
+            value_scale = QALYCalculator.WTP_THRESHOLD
+        else:
+            value_scale = self.val_life_year
         
         for t in range(self.terminal_age - 1, self.min_age - 1, -1):
-            for r in range(self.n_risk_classes):  # Risk class loop
+            for r in range(self.n_risk_classes):
                 T = self.trans_calc.get_matrix(t, risk_class=r)
                 
-                for n in range(self.max_screens + 1):  # screens_used so far
+                for n in range(self.max_screens + 1):
                     screens_remaining = self.max_screens - n
                     
                     for h in range(self.max_history + 1):
@@ -930,77 +1034,69 @@ class TrueDPOptimizer:
                         next_h_screen = 0
                         
                         # --- Action 0: WAIT ---
-                        ev_wait = np.zeros(6)
-                        for s in range(6):
-                            expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns, r, n] for ns in range(6))
+                        ev_wait = np.zeros(n_states)
+                        for s in range(n_states):
+                            expected_future = sum(T[s, ns] * self.V[t+1, next_h_wait, ns, r, n] for ns in range(n_states))
                             immediate = self._get_immediate_reward(s, t, action=0)
                             ev_wait[s] = immediate + gamma * expected_future
                         
-                        # --- Action 1: SCREEN (if allowed) ---
-                        ev_screen = np.zeros(6)
+                        # --- Action 1: SCREEN ---
+                        ev_screen = np.zeros(n_states)
                         can_screen = (screens_remaining > 0) and (h >= self.min_screen_interval)
                         
                         if can_screen:
-                            n_after_screen = n + 1  # screens_used after screening
+                            n_after_screen = n + 1
+                            future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(n_states))
                             
-                            # 건강 상태(0)에서의 미래 가치
-                            future_healthy = sum(T[0, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
-                            
-                            # S=0
+                            # S=0 (Healthy)
                             immediate_0 = self._get_immediate_reward(0, t, action=1)
                             ev_screen[0] = immediate_0 - self.cost_colo + gamma * future_healthy
                             
-                            # S=1 (Early Polyp)
-                            future_polyp = sum(T[1, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
-                            v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
-                            v_missed = self._get_immediate_reward(1, t, action=1) + gamma * future_polyp
-                            ev_screen[1] = -self.cost_colo - self.cost_colo_polyp + (
-                                self.sens_early * v_cured + (1 - self.sens_early) * v_missed
-                            )
+                            # S=1-6 (Polyp Stages)
+                            for polyp_stage in range(1, 7):
+                                sens = polyp_sens[polyp_stage - 1]
+                                future_polyp = sum(T[polyp_stage, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(n_states))
+                                v_cured = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
+                                v_missed = self._get_immediate_reward(polyp_stage, t, action=1) + gamma * future_polyp
+                                ev_screen[polyp_stage] = -self.cost_colo - self.cost_colo_polyp + (
+                                    sens * v_cured + (1 - sens) * v_missed
+                                )
                             
-                            # S=2 (Advanced Polyp)
-                            future_adv = sum(T[2, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
-                            v_cured_adv = self._get_immediate_reward(0, t, action=1) + gamma * future_healthy
-                            v_missed_adv = self._get_immediate_reward(2, t, action=1) + gamma * future_adv
-                            ev_screen[2] = -self.cost_colo - self.cost_colo_polyp + (
-                                self.sens_adv * v_cured_adv + (1 - self.sens_adv) * v_missed_adv
-                            )
+                            # S=7-10 (Cancer I-IV)
+                            for cancer_stage in range(1, 5):
+                                state_idx = 6 + cancer_stage
+                                future_cancer = sum(T[state_idx, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(n_states))
+                                treatment_bonus = value_scale * 0.1 * (5 - cancer_stage)
+                                v_detected = self._get_immediate_reward(state_idx, t, action=1) + gamma * future_cancer + treatment_bonus
+                                v_missed = self._get_immediate_reward(state_idx, t, action=1) + gamma * future_cancer
+                                ev_screen[state_idx] = -self.cost_colo - self.cost_cancer_init + (
+                                    cancer_sens * v_detected + (1 - cancer_sens) * v_missed
+                                )
                             
-                            # S=3 (Undetected Cancer)
-                            future_undetected = sum(T[3, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
-                            future_detected = sum(T[4, ns] * self.V[t+1, next_h_screen, ns, r, n_after_screen] for ns in range(6))
-                            v_detected = self._get_immediate_reward(4, t, action=1) + gamma * future_detected
-                            v_missed_ca = self._get_immediate_reward(3, t, action=1) + gamma * future_undetected
-                            ev_screen[3] = -self.cost_colo - self.cost_cancer_init + (
-                                self.sens_cancer * v_detected + (1 - self.sens_cancer) * v_missed_ca
-                            )
-                            
-                            ev_screen[4] = ev_wait[4]
-                            ev_screen[5] = ev_wait[5]
+                            ev_screen[11] = ev_wait[11]
                         else:
-                            ev_screen = ev_wait.copy()  # Can't screen, same as wait
+                            ev_screen = ev_wait.copy()
                         
                         # --- Optimal Action Selection ---
                         prior = self._get_state_prior(t)
-                        denom = sum(prior[s] for s in range(4))
+                        actionable_states = list(range(11))
+                        denom = sum(prior.get(s, 0) for s in actionable_states)
                         if denom > 0:
-                            E_wait = sum(prior[s] / denom * ev_wait[s] for s in range(4))
-                            E_screen = sum(prior[s] / denom * ev_screen[s] for s in range(4))
+                            E_wait = sum(prior.get(s, 0) / denom * ev_wait[s] for s in actionable_states)
+                            E_screen = sum(prior.get(s, 0) / denom * ev_screen[s] for s in actionable_states)
                         else:
                             E_wait = ev_wait[0]
                             E_screen = ev_screen[0]
                         
-                        # Choose optimal action
                         if can_screen and E_screen > E_wait:
                             self.Policy[t, h, r, n] = 1
-                            for s in range(6):
+                            for s in range(n_states):
                                 self.V[t, h, s, r, n] = ev_screen[s]
                         else:
                             self.Policy[t, h, r, n] = 0
-                            for s in range(6):
+                            for s in range(n_states):
                                 self.V[t, h, s, r, n] = ev_wait[s]
                         
-                        # Debug (only for first risk class and n=0)
                         if h == 10 and n == 0 and t in [50, 60, 70] and r in [0, self.n_risk_classes - 1]:
                             diff = E_screen - E_wait if can_screen else 0
                             print(f"[Age {t}, Risk={r}, screens=0] Wait: {E_wait:,.0f} vs Screen: {E_screen:,.0f} | Diff: {diff:,.0f}")
@@ -1041,7 +1137,7 @@ class TrueDPOptimizer:
             sub_policies[obj_type] = self.Policy.copy()
             
             # 초기화 (with risk class dimension)
-            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 6, self.n_risk_classes))
+            self.V = np.zeros((self.terminal_age + 2, self.max_history + 1, 12, self.n_risk_classes))
             
             # 원래 목적 함수 복원
             self.objective_type = original_type
@@ -1070,7 +1166,7 @@ class TrueDPOptimizer:
                         self.Policy[t, h, r] = 0
                     
                     # 가중 평균 가치 함수
-                    for s in range(6):
+                    for s in range(12):
                         weighted_value = sum(
                             self.pareto_weights[obj_type] * sub_values[obj_type][t, h, s, r]
                             for obj_type in sub_objectives
@@ -1246,55 +1342,42 @@ class TrueDPOptimizer:
 
 
 def main():
-    """Main entry point for true DP optimization."""
-    parser = argparse.ArgumentParser(
-        description='Colorectal Cancer Screening Optimization using Dynamic Programming',
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+    """Main entry point for true DP optimization with interactive input."""
+    print("\n" + "=" * 70)
+    print("  COLORECTAL CANCER SCREENING OPTIMIZATION")
+    print("  True Dynamic Programming with Known Transition Probabilities")
+    print("=" * 70)
     
-    parser.add_argument(
-        '--objective', '-o', 
-        type=int, 
-        default=5,
-        choices=[1, 2, 3, 4, 5, 6],
-        help='''Objective function type:
-  1 = CRC_INCIDENCE   - Minimize CRC incidence (대장암 발생률 최소화)
-  2 = CRC_MORTALITY   - Minimize CRC mortality (대장암 사망률 최소화)
-  3 = LIFE_YEARS_LOST - Minimize life years lost (손실 생존연수 최소화)
-  4 = OVERALL_COSTS   - Minimize overall costs (전체 비용 최소화)
-  5 = QALY            - Maximize QALY (Quality-Adjusted Life Years 최대화) [default]
-  6 = PARETO          - Pareto optimal solution (다중 목적 최적해)'''
-    )
+    # 목적 함수 선택
+    print("\n[목적 함수 선택]")
+    print("  1 = CRC_INCIDENCE   - 대장암 발생률 최소화")
+    print("  2 = CRC_MORTALITY   - 대장암 사망률 최소화")
+    print("  3 = LIFE_YEARS_LOST - 손실 생존연수 최소화")
+    print("  4 = OVERALL_COSTS   - 전체 비용 최소화")
+    print("  5 = QALY            - Quality-Adjusted Life Years 최대화 [기본값]")
+    print("  6 = PARETO          - 다중 목적 최적해")
     
-    parser.add_argument(
-        '--settings', '-s',
-        type=str,
-        default='settings.ini',
-        help='Path to settings.ini file (default: settings.ini)'
-    )
+    objective_input = input("목적 함수 번호 입력 (기본값=5): ").strip()
+    objective_num = int(objective_input) if objective_input else 5
+    if objective_num not in [1, 2, 3, 4, 5, 6]:
+        print(f"잘못된 입력. 기본값 5(QALY) 사용")
+        objective_num = 5
     
-    parser.add_argument(
-        '--interval', '-i',
-        type=int,
-        default=3,
-        help='최소 검진 간격 (년). 검진 후 이 기간 동안 검진 불가 (default: 3)'
-    )
+    # Settings 파일 경로
+    settings_input = input("\nSettings 파일 경로 (기본값=settings.ini): ").strip()
+    settings_file = settings_input if settings_input else "settings.ini"
     
-    parser.add_argument(
-        '--max-screens', '-m',
-        type=int,
-        default=0,
-        help='총 검진 횟수 제한. 0=무제한 (default: 0)'
-    )
+    # 최소 검진 간격
+    interval_input = input("\n최소 검진 간격 (년, 기본값=3): ").strip()
+    min_interval = int(interval_input) if interval_input else 3
     
-    parser.add_argument(
-        '--risk-classes', '-r',
-        type=int,
-        default=2,
-        help='개인별 용종 위험도 클래스 수 (default: 2). 값이 클수록 개인 변이 세분화'
-    )
+    # 총 검진 횟수 제한
+    max_screens_input = input("\n총 검진 횟수 제한 (0=무제한, 기본값=0): ").strip()
+    max_screens = int(max_screens_input) if max_screens_input else 0
     
-    args = parser.parse_args()
+    # 위험도 클래스 수
+    risk_classes_input = input("\n위험도 클래스 수 (기본값=2): ").strip()
+    n_risk_classes = int(risk_classes_input) if risk_classes_input else 2
     
     # Map integer to ObjectiveType enum
     objective_map = {
@@ -1306,21 +1389,20 @@ def main():
         6: ObjectiveType.PARETO
     }
     
-    objective_type = objective_map[args.objective]
+    objective_type = objective_map[objective_num]
     
     print("\n" + "=" * 70)
-    print("  COLORECTAL CANCER SCREENING OPTIMIZATION")
-    print("  True Dynamic Programming with Known Transition Probabilities")
     print(f"  Objective: {objective_type.name}")
-    print(f"  Min Interval: {args.interval} years")
-    print(f"  Risk Classes: {args.risk_classes}")
-    if args.max_screens > 0:
-        print(f"  Max Screenings: {args.max_screens}")
+    print(f"  Settings: {settings_file}")
+    print(f"  Min Interval: {min_interval} years")
+    print(f"  Risk Classes: {n_risk_classes}")
+    if max_screens > 0:
+        print(f"  Max Screenings: {max_screens}")
     print("=" * 70)
     
-    dp = TrueDPOptimizer(args.settings, objective_type=objective_type, 
-                         min_interval=args.interval, max_screens=args.max_screens,
-                         n_risk_classes=args.risk_classes)
+    dp = TrueDPOptimizer(settings_file, objective_type=objective_type, 
+                         min_interval=min_interval, max_screens=max_screens,
+                         n_risk_classes=n_risk_classes)
     dp.solve()
     dp.print_optimal_policy()
     dp.save_policy()
